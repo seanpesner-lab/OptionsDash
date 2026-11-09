@@ -6,6 +6,8 @@ on:
     # (9:30 AM-4:00 PM Eastern) in both EST and EDT, plus the after-close run.
     # GitHub may start scheduled runs a few minutes late.
     - cron: "*/15 13-21 * * 1-5"
+    # Early morning run for the daily email: 7:30 AM EST / 8:30 AM EDT.
+    - cron: "30 12 * * 1-5"
   workflow_dispatch:
     inputs:
       send_email:
@@ -90,11 +92,29 @@ jobs:
             echo "No history to save (provisional=$prov, bar_date=$d)."
           fi
 
-      # The daily email goes out with the first final scan of each trading day,
-      # the same run that saves history. Running the workflow by hand with
-      # "send_email" ticked sends one right away as a test.
+      # The daily email goes out once each weekday morning, from the first run that
+      # still shows the previous day's final close (before intraday data starts
+      # around 9:45 AM Eastern). history/emailed.txt records the days already sent.
+      # Running the workflow by hand with "send_email" ticked sends one right away.
+      - name: Decide on email
+        id: mail
+        run: |
+          today=$(TZ=America/New_York date +%F)
+          dow=$(TZ=America/New_York date +%u)
+          hhmm=$(TZ=America/New_York date +%H%M)
+          prov=$(jq -r .meta.provisional site/data/latest.json)
+          d=$(jq -r .meta.bar_date site/data/latest.json)
+          sent=no
+          if [ -f history/emailed.txt ] && grep -qx "$today" history/emailed.txt; then sent=yes; fi
+          if [ "${{ inputs.send_email }}" = "true" ]; then
+            echo "send=test" >> "$GITHUB_OUTPUT"
+          elif [ "$dow" -le 5 ] && [ "$hhmm" -lt 1100 ] && [ "$prov" = "false" ] && [ "$d" != "$today" ] && [ "$sent" = "no" ]; then
+            echo "send=daily" >> "$GITHUB_OUTPUT"
+          fi
+          echo "today=$today dow=$dow time=$hhmm provisional=$prov bar_date=$d already_sent=$sent"
+
       - name: Email top 10
-        if: steps.history.outputs.saved == 'true' || inputs.send_email == true
+        if: steps.mail.outputs.send != ''
         env:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
@@ -106,6 +126,15 @@ jobs:
             exit 0
           fi
           python notify.py site/data/latest.json --options site/data/options.json
+          if [ "${{ steps.mail.outputs.send }}" = "daily" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            mkdir -p history
+            TZ=America/New_York date +%F >> history/emailed.txt
+            git add history/emailed.txt
+            git commit -m "Daily email sent $(TZ=America/New_York date +%F)"
+            git pull --rebase -q && git push
+          fi
 
       - uses: actions/upload-pages-artifact@v3
         with:

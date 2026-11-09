@@ -88,7 +88,7 @@ def build(data, url, options=None):
     prov = meta.get("provisional")
     d = dt.date.fromisoformat(bar) if bar != "?" else None
     day = f"{d:%a %b} {d.day}" if d else bar
-    subject = f"Top {len(picks)} call setups - {day}" + (" (intraday, provisional)" if prov else "")
+    subject = f"Top {len(picks)} call setups - {day}" + (" (intraday, provisional)" if prov else " close")
 
     # Plain text
     lines = [f"Top call setups from your S&P 500 scan, {'prices so far on' if prov else 'close of'} {bar}.", ""]

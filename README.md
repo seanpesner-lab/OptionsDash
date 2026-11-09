@@ -26,7 +26,7 @@ The page reloads its data every 5 minutes while it's open.
 
 ## Daily email
 
-After the first final scan of each trading day (from 4:20 PM Eastern), `notify.py` emails the top 10 call setups. They are ranked Ready (reversal triggered or turned), then Building (momentum with rising MACD histogram, squeeze), then Setting up (oversold watch), with the higher score first in each group. Earnings within 14 days are flagged.
+Each weekday morning (around 7:30 AM Eastern in winter, 8:30 AM in summer), `notify.py` emails the top 10 call setups from the previous day's final close, with the best-fit call contract for each. `history/emailed.txt` records the days already sent, so it goes out once a day. They are ranked Ready (reversal triggered or turned), then Building (momentum with rising MACD histogram, squeeze), then Setting up (oversold watch), with the higher score first in each group. Earnings within 14 days are flagged.
 
 To turn it on, add these repository secrets:
 
