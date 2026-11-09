@@ -36,6 +36,15 @@ To turn it on, add these repository secrets:
 
 To send a test now, go to Actions → Scan and publish → Run workflow and tick **send_email**.
 
+## Track record
+
+The morning run also appends that day's top 10, with the best-fit call and its quote, to `history/picks.csv`. Every run then scores all recorded picks (`track.py update`) into the **Track record** tab:
+
+- **Stock:** return from the signal day's close to the latest price, and after 5, 10 and 20 trading days, each compared with SPY over the same days.
+- **Call:** return from the mid price when picked to the current mid. Once expired, the call is valued at the stock's close on expiration minus the strike, or zero.
+
+Picks made since the last close are listed but left out of the averages until they've had a trading day to move.
+
 ## Running locally
 
 ```bash

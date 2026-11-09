@@ -168,6 +168,7 @@ table.otab td:first-child { font-weight: 400; }
   <nav class="tabs" role="tablist" aria-label="Views">
     <button class="tab" type="button" role="tab" id="tabbtn-scanner" data-tab="scanner" aria-selected="true" aria-controls="tab-scanner">Scanner</button>
     <button class="tab" type="button" role="tab" id="tabbtn-options" data-tab="options" aria-selected="false" aria-controls="tab-options">Options</button>
+    <button class="tab" type="button" role="tab" id="tabbtn-track" data-tab="track" aria-selected="false" aria-controls="tab-track">Track record</button>
   </nav>
 
   <div class="tabpanel" id="tab-scanner" role="tabpanel" aria-labelledby="tabbtn-scanner">
@@ -266,6 +267,51 @@ table.otab td:first-child { font-weight: 400; }
       <p class="foot">Prices come from Alpaca's free indicative options feed, which is close to the market but delayed and not exact. Always check the live quote in your broker. "Move to break even" is how far the stock must rise by expiration for the call to be worth what you paid. Contracts that expire after an announced earnings date are flagged because option prices usually drop after the report. These are contracts that fit rules, not trade recommendations.</p>
     </section>
   </div>
+  <div class="tabpanel" id="tab-track" role="tabpanel" aria-labelledby="tabbtn-track" hidden>
+    <section class="sec">
+      <div class="sec-head">
+        <h2>How the picks have done</h2>
+        <p>Every morning's top 10 from the email is logged with its best-fit call. Stock returns run from the signal day's close; option returns from the contract's mid price when it was picked. SPY over the same days is the benchmark.</p>
+      </div>
+      <p class="banner" id="trk-error" hidden></p>
+      <div class="tiles" id="trk-tiles"></div>
+      <p class="cap muted" id="trk-meta"></p>
+    </section>
+
+    <section class="sec" id="trk-tiers-sec">
+      <div class="sec-head">
+        <h2>By group</h2>
+        <p>Averages per pick. 5, 10 and 20 days count trading days after the signal, and only include picks old enough to have them.</p>
+      </div>
+      <div class="tablewrap">
+        <table class="otab">
+          <thead><tr>
+            <th>Group</th><th>Picks</th><th>Stock avg</th><th>Stock up</th><th>vs SPY</th>
+            <th>After 5d</th><th>After 10d</th><th>After 20d</th><th>Call avg</th><th>Calls up</th>
+          </tr></thead>
+          <tbody id="trk-tiers"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head">
+        <h2>Every pick</h2>
+        <p>Newest first. "Now" is the latest price; an expired call is valued at what it was worth at expiration.</p>
+      </div>
+      <div class="tablewrap">
+        <table class="otab">
+          <thead><tr>
+            <th>Picked</th><th>Ticker</th><th>#</th><th>Group</th><th>Entry</th><th>Now</th><th>Stock</th><th>vs SPY</th>
+            <th>5d</th><th>10d</th><th>Call</th><th>Paid</th><th>Now</th><th>Call return</th>
+          </tr></thead>
+          <tbody id="trk-rows"></tbody>
+        </table>
+      </div>
+      <p class="foot">Option returns use mid prices on both ends; buying at the ask and selling at the bid would do worse by roughly the spread. Morning entries use the previous evening's quotes, since the email goes out before the open. Past results don't predict future ones.</p>
+    </section>
+  </div>
+
   <p class="foot" id="source"></p>
 </div>
 
@@ -528,13 +574,78 @@ table.otab td:first-child { font-weight: 400; }
         if (!optStamp) { var l = $('opt-list'); l.replaceChildren(el('p', 'empty', 'Option data has not been generated yet. It appears after the next scheduled run.')); }
       });
   }
+  // ---------------------------------------------------------------- track record tab
+  var trkStamp = null;
+  function pct(v, cls) {
+    var td = el('td', v == null ? 'muted' : (v > 0 ? 'up' : v < 0 ? 'neg' : ''), v == null ? '—' : (v > 0 ? '+' : '') + fx(v, 1) + '%');
+    if (cls) td.className += ' ' + cls;
+    return td;
+  }
+  function renderTrack(t) {
+    var m = t.meta || {}, s = (t.summary || {}).all || {}, picks = t.picks || [];
+    $('trk-error').hidden = !m.error; $('trk-error').textContent = m.error || '';
+    var tiles = $('trk-tiles'); tiles.replaceChildren();
+    function tile(label, value, note) {
+      var d = el('div', 'tile'); d.append(el('span', 'tile-label', label), el('span', 'tile-n', value), el('span', 'tile-note', note)); tiles.append(d);
+    }
+    function sp(v) { return v == null ? '—' : (v > 0 ? '+' : '') + fx(v, 1) + '%'; }
+    tile('Picks tracked', String(s.picks || 0), !m.pick_days ? 'none yet' : 'over ' + m.pick_days + ' morning' + (m.pick_days === 1 ? '' : 's') +
+      (s.picks > (s.scored || 0) ? ' · ' + (s.picks - (s.scored || 0)) + ' too new to score' : ''));
+    tile('Stocks up', s.stock_win_rate == null ? '—' : fx(s.stock_win_rate, 0) + '%', 'avg ' + sp(s.stock_avg_pct));
+    tile('Vs SPY', sp(s.vs_spy_avg_pct), s.beat_spy_rate == null ? 'avg per pick' : 'beat SPY ' + fx(s.beat_spy_rate, 0) + '% of the time');
+    tile('Calls', sp(s.option_avg_pct), s.option_win_rate == null ? 'avg return per call' : fx(s.option_win_rate, 0) + '% up · ' + s.option_picks + ' calls');
+    $('trk-meta').textContent = m.generated_at ? 'Prices updated ' + ago(m.generated_at) + (m.first_pick ? ' · tracking since ' + fmtDate(utc(m.first_pick)) : '') : '';
+
+    var tb = $('trk-tiers'); tb.replaceChildren();
+    var by = (t.summary || {}).by_tier || {};
+    [['All picks', s]].concat(['Ready', 'Building', 'Setting up'].map(function (k) { return [k, by[k] || {}]; })).forEach(function (p, i) {
+      var b = p[1], tr = el('tr');
+      var name = el('td', i === 0 ? '' : 'tier-' + p[0].split(' ')[0], p[0]); if (i === 0) name.style.fontWeight = '500';
+      tr.append(name, el('td', '', String(b.picks || 0)), pct(b.stock_avg_pct),
+        el('td', '', b.stock_win_rate == null ? '—' : fx(b.stock_win_rate, 0) + '%'), pct(b.vs_spy_avg_pct),
+        pct(b.d5_avg_pct), pct(b.d10_avg_pct), pct(b.d20_avg_pct), pct(b.option_avg_pct),
+        el('td', '', b.option_win_rate == null ? '—' : fx(b.option_win_rate, 0) + '%'));
+      tb.append(tr);
+    });
+
+    var rows = $('trk-rows'); rows.replaceChildren();
+    if (!picks.length) {
+      var tr0 = el('tr'), td0 = el('td', 'empty', 'Tracking starts with the first morning email. Each weekday adds 10 picks here, and returns fill in as prices move.');
+      td0.colSpan = 14; td0.style.whiteSpace = 'normal'; tr0.append(td0); rows.append(tr0); return;
+    }
+    picks.forEach(function (p) {
+      var tr = el('tr');
+      var call = p.contract ? fmtShort(utc(p.expiration)) + ' ' + d3.format('~g')(p.strike) + 'C' : '—';
+      var state = el('td', p.option_state === 'expired' ? 'muted' : '', call);
+      if (p.option_state === 'expired') { state.append(' '); state.append(el('span', 'flag', 'expired')); }
+      tr.append(el('td', '', fmtShort(utc(p.picked_on))), el('td', '', p.ticker), el('td', 'muted', String(p.rank)),
+        el('td', 'tier-' + String(p.tier).split(' ')[0], p.tier),
+        el('td', '', fx(p.entry_close, 2)), el('td', '', fx(p.last_close, 2)),
+        pct(p.stock_pct), pct(p.vs_spy_pct), pct(p.d5_pct), pct(p.d10_pct), state,
+        el('td', '', p.entry_mid == null ? '—' : fx(p.entry_mid, 2)), el('td', '', p.option_value == null ? '—' : fx(p.option_value, 2)),
+        pct(p.option_pct));
+      rows.append(tr);
+    });
+  }
+  function loadTrack() {
+    return fetch('data/performance.json?t=' + Date.now(), {cache: 'no-store'})
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (t) {
+        var st = t.meta && t.meta.generated_at;
+        if (st && st === trkStamp) return;
+        trkStamp = st; renderTrack(t);
+      })
+      .catch(function () { if (!trkStamp) renderTrack({meta: {}, summary: {}, picks: []}); });
+  }
+
   function showTab(name, fromHash) {
-    if (name !== 'options') name = 'scanner';
+    if (name !== 'options' && name !== 'track') name = 'scanner';
     document.querySelectorAll('.tab').forEach(function (b) { b.setAttribute('aria-selected', b.getAttribute('data-tab') === name ? 'true' : 'false'); });
     $('tab-scanner').hidden = name !== 'scanner';
     $('tab-options').hidden = name !== 'options';
+    $('tab-track').hidden = name !== 'track';
     if (name === 'scanner') renderChart();
-    if (!fromHash) { try { history.replaceState(null, '', name === 'options' ? '#options' : location.pathname + location.search); } catch (e) {} }
+    if (!fromHash) { try { history.replaceState(null, '', name === 'scanner' ? location.pathname + location.search : '#' + name); } catch (e) {} }
   }
   document.querySelectorAll('.tab').forEach(function (b) { b.addEventListener('click', function () { showTab(b.getAttribute('data-tab')); }); });
   window.addEventListener('hashchange', function () { showTab(location.hash.slice(1), true); });
@@ -572,11 +683,12 @@ table.otab td:first-child { font-weight: 400; }
     });
   });
   var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(renderChart, 150); });
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) { load(); loadOptions(); } });
-  setInterval(function () { if (!document.hidden) { load(); loadOptions(); } }, REFRESH_MS);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { load(); loadOptions(); loadTrack(); } });
+  setInterval(function () { if (!document.hidden) { load(); loadOptions(); loadTrack(); } }, REFRESH_MS);
   showTab(location.hash.slice(1), true);
   load();
   loadOptions();
+  loadTrack();
 })();
 </script>
 </body>

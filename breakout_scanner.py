@@ -176,10 +176,10 @@ def fetch_yahoo(tickers):
     return frames
 
 
-def fetch_alpaca(tickers, key, secret, feed="sip"):
+def fetch_alpaca(tickers, key, secret, feed="sip", days=740, min_bars=61):
     import requests
     end = dt.datetime.now(dt.timezone.utc) - dt.timedelta(minutes=16)  # free plan: SIP is 15 min delayed
-    start = end - dt.timedelta(days=740)
+    start = end - dt.timedelta(days=days)
     sess = requests.Session()
     sess.headers.update({"APCA-API-KEY-ID": key, "APCA-API-SECRET-KEY": secret})
     raw = {}
@@ -212,7 +212,7 @@ def fetch_alpaca(tickers, key, secret, feed="sip"):
         df = pd.DataFrame({"Close": b["c"].astype(float).values, "High": b["h"].astype(float).values,
                            "Volume": b["v"].astype(float).values}, index=pd.DatetimeIndex(idx))
         df = df[~df.index.duplicated(keep="last")].sort_index()
-        if len(df) > 60:
+        if len(df) >= min_bars:
             frames[sym] = df
     return frames
 
