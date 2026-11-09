@@ -62,6 +62,14 @@ jobs:
           if [ -n "$ALPHAVANTAGE_API_KEY" ]; then EXTRA="--earnings"; fi
           python breakout_scanner.py --source alpaca --site site $EXTRA
 
+      # Call contracts for the top 10. A failure here leaves the scanner page working.
+      - name: Option chains
+        continue-on-error: true
+        env:
+          ALPACA_API_KEY_ID: ${{ secrets.ALPACA_API_KEY_ID }}
+          ALPACA_API_SECRET_KEY: ${{ secrets.ALPACA_API_SECRET_KEY }}
+        run: python options_scan.py site/data/latest.json site/data/options.json
+
       # Once per trading day, after the close, keep a copy of the final scan.
       # This also keeps the repository active so GitHub doesn't pause the schedule.
       - name: Save daily history
@@ -97,7 +105,7 @@ jobs:
             echo "::warning::Email skipped: add the SMTP_USER, SMTP_PASSWORD and EMAIL_TO secrets."
             exit 0
           fi
-          python notify.py site/data/latest.json
+          python notify.py site/data/latest.json --options site/data/options.json
 
       - uses: actions/upload-pages-artifact@v3
         with:

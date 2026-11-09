@@ -127,6 +127,28 @@ summary { cursor: pointer; font-weight: 500; }
 .rules { display: grid; gap: 14px; margin-top: 14px; max-width: 72ch; font-size: 0.92rem; }
 .rules p { margin: 0; } .rules h3 { margin: 0 0 2px; font-size: 0.95rem; font-weight: 600; }
 .foot { font-size: 0.78rem; color: var(--muted); margin: 0; max-width: 80ch; }
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: -12px; }
+.tab { font: inherit; font-weight: 500; font-size: 0.92rem; padding: 8px 14px; border: 0; background: none; color: var(--muted);
+  border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--c-rev); }
+.tab:focus-visible { outline: 2px solid var(--c-rev); outline-offset: 2px; }
+.tabpanel { display: flex; flex-direction: column; gap: 36px; }
+.tabpanel[hidden] { display: none; }
+.rulechips { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.rulechips li { font-size: 0.78rem; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); }
+.optlist { display: flex; flex-direction: column; gap: 12px; }
+.ostock { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.ostock-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; padding: 12px 16px; }
+.ostock-head .tkr { font-size: 1.15rem; }
+.ostock-rank { font-family: var(--mono); color: var(--muted); font-size: 0.85rem; }
+.ostock-reason { flex-basis: 100%; font-size: 0.84rem; color: var(--muted); margin: 0; }
+.ostock .tablewrap { border: 0; border-top: 1px solid var(--line); border-radius: 0; }
+.ostock .empty { padding: 10px 16px 14px; }
+.tier-Ready { color: var(--ok); } .tier-Building { color: var(--c-mom); } .tier-Setting { color: var(--warn); }
+.flag { font-family: var(--sans); font-size: 0.72rem; font-weight: 500; color: var(--warn); }
+table.otab th:nth-child(-n+2), table.otab td:nth-child(-n+2) { text-align: left; }
+table.otab td:first-child { font-weight: 400; }
 @media (prefers-reduced-motion: no-preference) { .card, .tile { transition: border-color .2s; } .card:hover { border-color: var(--muted); } }
 </style>
 </head>
@@ -142,6 +164,13 @@ summary { cursor: pointer; font-weight: 500; }
     <p class="lede" id="lede">Loading the latest scan…</p>
     <p class="banner" id="provisional" hidden>Market is open. These signals use today's bar so far and can change before the 4:00 PM close. The after-close scan is the one to act on.</p>
   </header>
+
+  <nav class="tabs" role="tablist" aria-label="Views">
+    <button class="tab" type="button" role="tab" id="tabbtn-scanner" data-tab="scanner" aria-selected="true" aria-controls="tab-scanner">Scanner</button>
+    <button class="tab" type="button" role="tab" id="tabbtn-options" data-tab="options" aria-selected="false" aria-controls="tab-options">Options</button>
+  </nav>
+
+  <div class="tabpanel" id="tab-scanner" role="tabpanel" aria-labelledby="tabbtn-scanner">
 
   <section class="sec" id="summary" aria-label="Hits by setup">
     <div class="tiles" id="tiles"></div>
@@ -217,6 +246,26 @@ summary { cursor: pointer; font-weight: 500; }
       <p>Only stocks above $10 with at least $100M average daily dollar volume are scanned. A stock that fits more than one setup shows only the first, in the order above. These are rule matches, not predictions or advice.</p>
     </div>
   </details>
+  </div>
+
+  <div class="tabpanel" id="tab-options" role="tabpanel" aria-labelledby="tabbtn-options" hidden>
+    <section class="sec">
+      <div class="sec-head">
+        <h2>Call contracts for the top 10</h2>
+        <p>The same 10 stocks as the daily email, ranked Ready, then Building, then Setting up. For each, the calls that fit the rules below, tightest spread first.</p>
+      </div>
+      <ul class="rulechips" aria-label="Contract rules">
+        <li>30–60 days to expiration</li>
+        <li>Delta 0.40–0.60</li>
+        <li>Spread ≤ 10% of mid</li>
+        <li>Traded today ranked first</li>
+      </ul>
+      <p class="banner" id="opt-error" hidden></p>
+      <p class="cap muted" id="opt-meta"></p>
+      <div class="optlist" id="opt-list"><p class="empty">Loading option chains…</p></div>
+      <p class="foot">Prices come from Alpaca's free indicative options feed, which is close to the market but delayed and not exact. Always check the live quote in your broker. "Move to break even" is how far the stock must rise by expiration for the call to be worth what you paid. Contracts that expire after an announced earnings date are flagged because option prices usually drop after the report. These are contracts that fit rules, not trade recommendations.</p>
+    </section>
+  </div>
   <p class="foot" id="source"></p>
 </div>
 
@@ -419,6 +468,77 @@ summary { cursor: pointer; font-weight: 500; }
 
   function renderAll() { renderHeader(); renderTiles(); renderReady(); renderChart(); renderTable(); }
 
+  // ---------------------------------------------------------------- options tab
+  var optStamp = null;
+  function renderOptions(o) {
+    var list = $('opt-list'); list.replaceChildren();
+    var m = o.meta || {};
+    $('opt-error').hidden = !m.error;
+    $('opt-error').textContent = m.error ? 'Option chains could not be loaded: ' + m.error : '';
+    $('opt-meta').textContent = m.generated_at ? 'Option prices updated ' + ago(m.generated_at) + ' · ' +
+      (m.feed === 'opra' ? 'real-time OPRA feed' : 'free indicative feed') : '';
+    var stocks = o.stocks || [];
+    if (!stocks.length) { list.append(el('p', 'empty', 'No stock fits a call setup right now.')); return; }
+    stocks.forEach(function (s, i) {
+      var box = el('article', 'ostock'); box.id = 'opt-' + s.ticker;
+      var head = el('div', 'ostock-head');
+      head.append(el('span', 'ostock-rank', '#' + (i + 1)), el('span', 'tkr', s.ticker),
+        el('span', 'cap tier-' + String(s.tier).split(' ')[0], s.tier),
+        el('span', 'cap muted', title(s.setup) + ' · ' + String(s.status).toLowerCase()),
+        el('span', 'cap mono', 'Stock ' + fx(s.close, 2)));
+      if (s.next_earnings) head.append(el('span', 'cap muted', 'Earnings ' + fmtShort(utc(s.next_earnings))));
+      head.append(el('p', 'ostock-reason', s.reason));
+      box.append(head);
+      var cs = s.contracts || [];
+      if (s.error) { box.append(el('p', 'empty', 'Chain not available: ' + s.error)); }
+      else if (!cs.length) {
+        box.append(el('p', 'empty', s.checked ? 'None of the ' + s.checked + ' calls checked fit the rules (usually the spread is too wide).' : 'No option chain returned.'));
+      } else {
+        var wrap = el('div', 'tablewrap'), t = el('table', 'otab');
+        var hr = el('tr');
+        ['Expiration', 'Strike', 'Mid', 'Cost', 'Spread', 'Delta', 'IV', 'Theta/day', 'Move to break even', 'Vol today'].forEach(function (h) { hr.append(el('th', '', h)); });
+        var thead = el('thead'); thead.append(hr);
+        var tb = el('tbody');
+        cs.forEach(function (c) {
+          var tr = el('tr');
+          var exp = el('td'); exp.append(fmtShort(utc(c.expiration)) + ' (' + c.dte + 'd)');
+          if (c.after_earnings) { exp.append(' '); exp.append(el('span', 'flag', 'after earnings')); }
+          tr.append(exp, el('td', '', fx(c.strike, 2)), el('td', '', fx(c.mid, 2)),
+            el('td', '', '$' + d3.format(',')(c.cost)), el('td', c.spread_pct > 5 ? 'warn' : '', fx(c.spread_pct, 1) + '%'),
+            el('td', '', fx(c.delta, 2)), el('td', '', c.iv_pct == null ? '—' : fx(c.iv_pct, 0) + '%'),
+            el('td', '', c.theta == null ? '—' : fx(c.theta, 2)),
+            el('td', c.move_pct > 0 ? '' : 'up', (c.move_pct > 0 ? '+' : '') + fx(c.move_pct, 1) + '%'),
+            el('td', c.volume ? '' : 'muted', d3.format(',')(c.volume)));
+          tb.append(tr);
+        });
+        t.append(thead, tb); wrap.append(t); box.append(wrap);
+      }
+      list.append(box);
+    });
+  }
+  function loadOptions() {
+    return fetch('data/options.json?t=' + Date.now(), {cache: 'no-store'})
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (o) {
+        var st = o.meta && o.meta.generated_at;
+        if (st && st === optStamp) { if (st) $('opt-meta').textContent = 'Option prices updated ' + ago(st); return; }
+        optStamp = st; renderOptions(o);
+      })
+      .catch(function () {
+        if (!optStamp) { var l = $('opt-list'); l.replaceChildren(el('p', 'empty', 'Option data has not been generated yet. It appears after the next scheduled run.')); }
+      });
+  }
+  function showTab(name, fromHash) {
+    if (name !== 'options') name = 'scanner';
+    document.querySelectorAll('.tab').forEach(function (b) { b.setAttribute('aria-selected', b.getAttribute('data-tab') === name ? 'true' : 'false'); });
+    $('tab-scanner').hidden = name !== 'scanner';
+    $('tab-options').hidden = name !== 'options';
+    if (name === 'scanner') renderChart();
+    if (!fromHash) { try { history.replaceState(null, '', name === 'options' ? '#options' : location.pathname + location.search); } catch (e) {} }
+  }
+  document.querySelectorAll('.tab').forEach(function (b) { b.addEventListener('click', function () { showTab(b.getAttribute('data-tab')); }); });
+  window.addEventListener('hashchange', function () { showTab(location.hash.slice(1), true); });
+
   function load() {
     return fetch('data/latest.json?t=' + Date.now(), {cache: 'no-store'})
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
@@ -452,9 +572,11 @@ summary { cursor: pointer; font-weight: 500; }
     });
   });
   var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(renderChart, 150); });
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) load(); });
-  setInterval(function () { if (!document.hidden) load(); }, REFRESH_MS);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { load(); loadOptions(); } });
+  setInterval(function () { if (!document.hidden) { load(); loadOptions(); } }, REFRESH_MS);
+  showTab(location.hash.slice(1), true);
   load();
+  loadOptions();
 })();
 </script>
 </body>

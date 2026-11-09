@@ -74,8 +74,16 @@ def top10(rows, n=10):
     return cands[:n]
 
 
-def build(data, url):
+def contract_line(c):
+    exp = dt.date.fromisoformat(c["expiration"])
+    s = (f"{exp:%b} {exp.day} {c['strike']:g}C: mid {c['mid']:.2f} (${c['cost']:,}), spread {c['spread_pct']:.1f}%, "
+         f"delta {c['delta']:.2f}, needs {c['move_pct']:+.1f}% by expiration")
+    return s + (", expires after earnings" if c.get("after_earnings") else "")
+
+
+def build(data, url, options=None):
     meta, picks = data.get("meta", {}), top10(data.get("rows", []))
+    best = {s["ticker"]: (s.get("contracts") or [None])[0] for s in (options or {}).get("stocks", [])}
     bar = meta.get("bar_date") or "?"
     prov = meta.get("provisional")
     d = dt.date.fromisoformat(bar) if bar != "?" else None
@@ -90,6 +98,8 @@ def build(data, url):
         lines.append(f"{i:>2}. {r['ticker']:<6} {TIER_LABEL[tier(r)]:<10} {r['setup'].title()} {r['status'].lower()}  "
                      f"close {r['close']:.2f}  RSI {r['rsi']:.1f}  score {r['score']:.1f}")
         lines.append(f"    {reason(r)}{warn}")
+        if best.get(r["ticker"]):
+            lines.append(f"    Best-fit call: {contract_line(best[r['ticker']])}")
     if not picks:
         lines.append("No stock fits a call setup today.")
     lines += ["", f"Dashboard: {url}", "",
@@ -104,8 +114,12 @@ def build(data, url):
         ed = earnings_days(r)
         warn = (f'<div style="color:#a96a00;font-weight:600;margin-top:2px">Earnings in {ed} day{"s" if ed != 1 else ""}: IV usually drops after the report</div>'
                 if ed is not None and 0 <= ed <= 14 else "")
+        c = best.get(r["ticker"])
+        if c:
+            warn += (f'<div style="margin-top:4px;font:12px monospace;color:#14201b;background:#f0f4f2;border-radius:4px;padding:4px 6px">'
+                     f'Best-fit call: {e(contract_line(c))}</div>')
         t = tier(r)
-        badge = {1: "#1a7f37", 2: "#3756c8", 3: "#a96a00"}[t]
+        badge ={1: "#1a7f37", 2: "#3756c8", 3: "#a96a00"}[t]
         rows_html.append(f"""
 <tr>
   <td style="padding:10px 8px;border-top:1px solid #e3e8e5;color:#5b6a63;font:13px monospace;vertical-align:top">{i}</td>
@@ -139,12 +153,17 @@ def build(data, url):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("json_path")
+    ap.add_argument("--options", help="options.json from options_scan.py, to add the best-fit contract per stock")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
     with open(args.json_path, encoding="utf-8") as fh:
         data = json.load(fh)
+    options = None
+    if args.options and os.path.exists(args.options):
+        with open(args.options, encoding="utf-8") as fh:
+            options = json.load(fh)
     url = os.environ.get("DASHBOARD_URL", "https://seanpesner-lab.github.io/OptionsDash/")
-    subject, text, html_doc = build(data, url)
+    subject, text, html_doc = build(data, url, options)
 
     if args.dry_run:
         with open("email.html", "w", encoding="utf-8") as fh:
