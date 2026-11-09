@@ -24,6 +24,18 @@ The page reloads its data every 5 minutes while it's open.
    - `ALPHAVANTAGE_API_KEY` (optional, for earnings dates; the free key is enough because the calendar is fetched once a day)
 5. **First run.** Go to Actions → Scan and publish → Run workflow. When it finishes, the page is at `https://<your-username>.github.io/<repo-name>/`.
 
+## Daily email
+
+After the first final scan of each trading day (from 4:20 PM Eastern), `notify.py` emails the top 10 call setups. They are ranked Ready (reversal triggered or turned), then Building (momentum with rising MACD histogram, squeeze), then Setting up (oversold watch), with the higher score first in each group. Earnings within 14 days are flagged.
+
+To turn it on, add these repository secrets:
+
+- `SMTP_USER`: the Gmail address that sends the email
+- `SMTP_PASSWORD`: a Gmail **app password** (Google Account → Security → 2-Step Verification → App passwords), not your normal password
+- `EMAIL_TO`: where to send it; separate several addresses with commas
+
+To send a test now, go to Actions → Scan and publish → Run workflow and tick **send_email**.
+
 ## Running locally
 
 ```bash
