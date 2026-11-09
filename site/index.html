@@ -204,7 +204,7 @@ summary { cursor: pointer; font-weight: 500; }
         <tbody id="rows"></tbody>
       </table>
     </div>
-    <p class="foot">Earnings dates come from the data provider and can be wrong. A struck-through date has already passed. Check the real date before buying short-dated calls.</p>
+    <p class="foot">Earnings dates come from Alpha Vantage and only include dates the company has announced. "Not announced" means no date is set yet. A struck-through date has already passed. Check the real date before buying short-dated calls.</p>
   </section>
 
   <details id="rules">
@@ -261,6 +261,11 @@ summary { cursor: pointer; font-weight: 500; }
     if (days < 0) return {cls: 'stale', note: 'Date already passed; check it'};
     if (days <= 14) return {cls: 'warn', note: days === 0 ? 'Earnings today' : 'Earnings in ' + days + ' day' + (days === 1 ? '' : 's')};
     return {cls: '', note: ''};
+  }
+  // "" means the calendar was checked and the company hasn't announced a date; missing means no calendar.
+  function earnText(r, short) {
+    if (r.next_earnings) return short ? fmtShort(utc(r.next_earnings)) : r.next_earnings;
+    return r.next_earnings === '' && r.setup !== 'AVOID' ? 'Not announced' : '—';
   }
   function defaultSort(a, b) {
     return (ORDER[a.setup] - ORDER[b.setup]) || ((RANK[a.status] ?? 4) - (RANK[b.status] ?? 4)) || (b.score - a.score);
@@ -319,7 +324,7 @@ summary { cursor: pointer; font-weight: 500; }
       var ei = earningsInfo(r);
       [['Close', fx(r.close, 2)], ['RSI now', fx(r.rsi, 1)], ['RSI 7-day low', fx(r.rsi_min7, 1)],
        ['vs 50-day', fx(r.vs_sma50_pct, 1) + '%'], ['Score', fx(r.score, 1)],
-       ['Next earnings', r.next_earnings ? fmtShort(utc(r.next_earnings)) : '—', ei.cls]].forEach(function (p) {
+       ['Next earnings', earnText(r, true), ei.cls || (r.next_earnings ? '' : 'muted')]].forEach(function (p) {
         kv.append(el('dt', '', p[0]), el('dd', p[2] || '', p[1]));
       });
       card.append(top, kv);
@@ -397,7 +402,7 @@ summary { cursor: pointer; font-weight: 500; }
     rows.forEach(function (r) {
       var tr = el('tr'), ei = earningsInfo(r);
       var stat = el('td'); stat.append(el('span', pillClass(r), r.status));
-      var earn = el('td', ei.cls, r.next_earnings || '—'); if (ei.note) earn.title = ei.note;
+      var earn = el('td', ei.cls || (r.next_earnings ? '' : 'muted'), earnText(r, false)); if (ei.note) earn.title = ei.note;
       tr.append(
         el('td', '', r.ticker), el('td', '', title(r.setup)), stat,
         el('td', '', fx(r.score, 1)), el('td', '', fx(r.close, 2)), el('td', '', fx(r.rsi, 1)), el('td', '', fx(r.rsi_min7, 1)),
