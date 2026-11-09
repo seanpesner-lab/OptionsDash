@@ -6,7 +6,12 @@ on:
     # (9:30 AM-4:00 PM Eastern) in both EST and EDT, plus the after-close run.
     # GitHub may start scheduled runs a few minutes late.
     - cron: "*/15 13-21 * * 1-5"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      send_email:
+        description: "Send the top-10 email now (a test, even if the market is open)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write   # commit the daily history file
@@ -60,6 +65,7 @@ jobs:
       # Once per trading day, after the close, keep a copy of the final scan.
       # This also keeps the repository active so GitHub doesn't pause the schedule.
       - name: Save daily history
+        id: history
         run: |
           prov=$(jq -r .meta.provisional site/data/latest.json)
           d=$(jq -r .meta.bar_date site/data/latest.json)
@@ -71,9 +77,27 @@ jobs:
             git add history
             git commit -m "Scan history for $d"
             git push
+            echo "saved=true" >> "$GITHUB_OUTPUT"
           else
             echo "No history to save (provisional=$prov, bar_date=$d)."
           fi
+
+      # The daily email goes out with the first final scan of each trading day,
+      # the same run that saves history. Running the workflow by hand with
+      # "send_email" ticked sends one right away as a test.
+      - name: Email top 10
+        if: steps.history.outputs.saved == 'true' || inputs.send_email == true
+        env:
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          DASHBOARD_URL: https://seanpesner-lab.github.io/OptionsDash/
+        run: |
+          if [ -z "$SMTP_USER" ] || [ -z "$SMTP_PASSWORD" ] || [ -z "$EMAIL_TO" ]; then
+            echo "::warning::Email skipped: add the SMTP_USER, SMTP_PASSWORD and EMAIL_TO secrets."
+            exit 0
+          fi
+          python notify.py site/data/latest.json
 
       - uses: actions/upload-pages-artifact@v3
         with:

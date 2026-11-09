@@ -319,8 +319,10 @@ def main():
     if args.site:
         now_et = dt.datetime.now(ET)
         bar_date = out["bar_date"].max() if len(out) else None
-        # A bar for today before the 4 PM close is still moving.
-        provisional = bool(bar_date == now_et.date().isoformat() and now_et.time() < dt.time(16, 0) and not args.asof)
+        # A bar for today is still moving until the 4 PM close, and Alpaca's free SIP feed
+        # lags 15 minutes, so treat it as final only from 4:20 PM Eastern.
+        final_at = dt.time(16, 20) if source == "alpaca" else dt.time(16, 0)
+        provisional = bool(bar_date == now_et.date().isoformat() and now_et.time() < final_at and not args.asof)
         meta = {
             "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "bar_date": bar_date,
