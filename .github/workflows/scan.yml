@@ -1,0 +1,83 @@
+name: Scan and publish
+
+on:
+  schedule:
+    # Every 15 minutes, 13:00-21:45 UTC on weekdays. That covers the US session
+    # (9:30 AM-4:00 PM Eastern) in both EST and EDT, plus the after-close run.
+    # GitHub may start scheduled runs a few minutes late.
+    - cron: "*/15 13-21 * * 1-5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write   # commit the daily history file
+  pages: write      # publish the dashboard
+  id-token: write
+
+concurrency:
+  group: scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - id: day
+        run: echo "day=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+
+      # The earnings calendar is fetched once a day, not every 15 minutes.
+      - uses: actions/cache@v4
+        with:
+          path: .cache
+          key: earnings-${{ steps.day.outputs.day }}
+
+      - name: Run scan
+        env:
+          ALPACA_API_KEY_ID: ${{ secrets.ALPACA_API_KEY_ID }}
+          ALPACA_API_SECRET_KEY: ${{ secrets.ALPACA_API_SECRET_KEY }}
+          ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
+        run: |
+          if [ -z "$ALPACA_API_KEY_ID" ] || [ -z "$ALPACA_API_SECRET_KEY" ]; then
+            echo "::error::Add the ALPACA_API_KEY_ID and ALPACA_API_SECRET_KEY repository secrets."
+            exit 1
+          fi
+          EXTRA=""
+          if [ -n "$ALPHAVANTAGE_API_KEY" ]; then EXTRA="--earnings"; fi
+          python breakout_scanner.py --source alpaca --site site $EXTRA
+
+      # Once per trading day, after the close, keep a copy of the final scan.
+      # This also keeps the repository active so GitHub doesn't pause the schedule.
+      - name: Save daily history
+        run: |
+          prov=$(jq -r .meta.provisional site/data/latest.json)
+          d=$(jq -r .meta.bar_date site/data/latest.json)
+          if [ "$prov" = "false" ] && [ "$d" != "null" ] && [ ! -f "history/$d.csv" ]; then
+            mkdir -p history
+            cp site/data/latest.csv "history/$d.csv"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add history
+            git commit -m "Scan history for $d"
+            git push
+          else
+            echo "No history to save (provisional=$prov, bar_date=$d)."
+          fi
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

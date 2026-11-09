@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S&amp;P 500 Setup Scanner</title>
+<meta name="description" content="Live S&P 500 scan for reversal, momentum, squeeze and avoid setups on daily bars.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one column, summary first (status line, tiles, ready cards), then the map, then the full table. */
+:root {
+  --bg: #f5f7f6; --panel: #ffffff; --fg: #14201b; --muted: #5b6a63; --line: #dbe2de; --grid: #e8edea;
+  --c-rev: #0f766e; --c-mom: #3756c8; --c-sq: #b7791f; --c-avoid: #9aa6a0;
+  --ok: #1a7f37; --warn: #a96a00; --bad: #c2410c;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --r: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1412; --panel: #151d1a; --fg: #e4ebe7; --muted: #92a199; --line: #26312c; --grid: #1d2723;
+    --c-rev: #2dd4bf; --c-mom: #7c9cff; --c-sq: #f2b544; --c-avoid: #6b7873;
+    --ok: #4ade80; --warn: #f2b544; --bad: #fb8a5c; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1412; --panel: #151d1a; --fg: #e4ebe7; --muted: #92a199; --line: #26312c; --grid: #1d2723;
+  --c-rev: #2dd4bf; --c-mom: #7c9cff; --c-sq: #f2b544; --c-avoid: #6b7873;
+  --ok: #4ade80; --warn: #f2b544; --bad: #fb8a5c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--sans); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 36px; }
+h1 { font-size: clamp(1.6rem, 3.2vw, 2.1rem); font-weight: 600; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+h2 { font-size: 1.1rem; font-weight: 600; margin: 0; text-wrap: balance; }
+.num, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.cap { font-size: 0.8rem; }
+
+.head { display: flex; flex-direction: column; gap: 10px; }
+.status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: 0.82rem; color: var(--muted); }
+.live { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; color: var(--fg); }
+.live i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+.live.is-provisional i { background: var(--warn); }
+.live.is-stale i { background: var(--bad); }
+.lede { margin: 0; max-width: 72ch; color: var(--muted); font-size: 1.02rem; }
+.lede b { color: var(--fg); font-weight: 500; font-family: var(--mono); }
+.banner { border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--line)); background: color-mix(in srgb, var(--warn) 9%, var(--panel));
+  border-radius: var(--r); padding: 10px 14px; font-size: 0.86rem; max-width: 80ch; }
+
+.sec { display: flex; flex-direction: column; gap: 14px; }
+.sec-head { display: flex; flex-direction: column; gap: 2px; }
+.sec-head p { margin: 0; color: var(--muted); font-size: 0.85rem; max-width: 72ch; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 10px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tile-label { display: flex; align-items: center; gap: 6px; font-size: 0.74rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.tile-n { font-family: var(--mono); font-size: 1.9rem; line-height: 1.15; }
+.tile-note { font-size: 0.78rem; color: var(--muted); }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block; }
+.d-REVERSAL { background: var(--c-rev); } .d-MOMENTUM { background: var(--c-mom); }
+.d-SQUEEZE { background: var(--c-sq); } .d-AVOID { background: var(--c-avoid); }
+
+.ready { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.card-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.tkr { font-family: var(--mono); font-size: 1.25rem; font-weight: 500; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 0; font-size: 0.82rem; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.empty { color: var(--muted); font-size: 0.88rem; margin: 0; }
+
+.pill { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 0.74rem; font-weight: 500; white-space: nowrap;
+  background: color-mix(in srgb, var(--c-avoid) 22%, transparent); }
+.pill.go { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+.pill.watch { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.pill.avoid { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); }
+.warn { color: var(--warn); font-weight: 500; }
+.stale { color: var(--muted); text-decoration: line-through; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 14px; list-style: none; margin: 0; padding: 0; font-size: 0.8rem; color: var(--muted); }
+.legend li { display: flex; align-items: center; gap: 6px; }
+.chart { position: relative; min-height: 300px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 8px; }
+.chart svg { display: block; overflow: visible; }
+.chart .tick text, .chart .axlab { fill: var(--muted); font-size: 11px; font-family: var(--sans); }
+.chart .tick line { stroke: var(--grid); }
+.chart .domain { stroke: var(--line); }
+.chart .band { fill: var(--c-rev); opacity: 0.07; }
+.chart .ref { stroke: var(--muted); stroke-dasharray: 3 3; opacity: 0.6; }
+.chart .lbl { fill: var(--fg); font-size: 11px; font-family: var(--mono); }
+.tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.14); padding: 7px 10px; font-size: 0.78rem; line-height: 1.45; white-space: nowrap; z-index: 2; }
+.tip b { font-family: var(--mono); font-weight: 500; }
+
+.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip { font: inherit; font-size: 0.8rem; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--fg); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.search { font: inherit; font-size: 0.82rem; padding: 5px 10px; border-radius: var(--r); border: 1px solid var(--line);
+  background: var(--panel); color: var(--fg); width: 150px; max-width: 100%; }
+.chip:focus-visible, .sort:focus-visible, .search:focus-visible, summary:focus-visible { outline: 2px solid var(--c-rev); outline-offset: 2px; }
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); }
+table { border-collapse: collapse; width: 100%; font-size: 0.8rem; }
+th, td { padding: 7px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+td { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+th:nth-child(-n+3), td:nth-child(-n+3) { text-align: left; }
+td:nth-child(2), td:nth-child(3), td:nth-child(9), td:nth-child(12) { font-family: var(--sans); }
+thead th { position: sticky; top: 0; background: var(--panel); font-weight: 500; color: var(--muted); }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: color-mix(in srgb, var(--fg) 4%, transparent); }
+td:first-child { font-weight: 500; }
+.sort { all: unset; cursor: pointer; }
+th[aria-sort="descending"] .sort::after { content: " \2193"; }
+th[aria-sort="ascending"] .sort::after { content: " \2191"; }
+.up { color: var(--ok); } .neg { color: var(--bad); }
+
+details { border-top: 1px solid var(--line); padding-top: 16px; }
+summary { cursor: pointer; font-weight: 500; }
+.rules { display: grid; gap: 14px; margin-top: 14px; max-width: 72ch; font-size: 0.92rem; }
+.rules p { margin: 0; } .rules h3 { margin: 0 0 2px; font-size: 0.95rem; font-weight: 600; }
+.foot { font-size: 0.78rem; color: var(--muted); margin: 0; max-width: 80ch; }
+@media (prefers-reduced-motion: no-preference) { .card, .tile { transition: border-color .2s; } .card:hover { border-color: var(--muted); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="head" id="overview">
+    <h1>S&amp;P 500 Setup Scanner</h1>
+    <div class="status">
+      <span class="live" id="live"><i></i><span id="live-text">Loading…</span></span>
+      <span id="updated"></span>
+      <span>Daily bars · RSI 14 · MACD 12/26/9</span>
+    </div>
+    <p class="lede" id="lede">Loading the latest scan…</p>
+    <p class="banner" id="provisional" hidden>Market is open. These signals use today's bar so far and can change before the 4:00 PM close. The after-close scan is the one to act on.</p>
+  </header>
+
+  <section class="sec" id="summary" aria-label="Hits by setup">
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <section class="sec" id="ready">
+    <div class="sec-head">
+      <h2>Reversals ready now</h2>
+      <p>Triggered or turned reversals, the setup behind MCD and DAL. Earnings within two weeks are flagged.</p>
+    </div>
+    <div class="ready" id="ready-cards"></div>
+  </section>
+
+  <section class="sec" id="map">
+    <div class="sec-head">
+      <h2>Where every hit sits</h2>
+      <p>RSI against distance from the 50-day average. The shaded band is RSI 33 or lower. Point at a dot for details.</p>
+    </div>
+    <ul class="legend">
+      <li><i class="dot d-REVERSAL"></i>Reversal</li>
+      <li><i class="dot d-MOMENTUM"></i>Momentum</li>
+      <li><i class="dot d-SQUEEZE"></i>Squeeze</li>
+      <li><i class="dot d-AVOID"></i>Avoid</li>
+    </ul>
+    <div class="chart" id="chart"></div>
+  </section>
+
+  <section class="sec" id="all">
+    <div class="sec-head">
+      <h2>All hits</h2>
+      <p>Sorted by setup, then status, then score. Click a column to sort by it.</p>
+    </div>
+    <div class="tools">
+      <button class="chip" type="button" data-setup="ALL" aria-pressed="true">All</button>
+      <button class="chip" type="button" data-setup="REVERSAL" aria-pressed="false">Reversal</button>
+      <button class="chip" type="button" data-setup="MOMENTUM" aria-pressed="false">Momentum</button>
+      <button class="chip" type="button" data-setup="SQUEEZE" aria-pressed="false">Squeeze</button>
+      <button class="chip" type="button" data-setup="AVOID" aria-pressed="false">Avoid</button>
+      <input class="search" id="search" type="search" placeholder="Find ticker" aria-label="Find ticker">
+      <span class="cap muted" id="shown"></span>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr>
+          <th><button class="sort" type="button" data-key="ticker">Ticker</button></th>
+          <th><button class="sort" type="button" data-key="setup">Setup</button></th>
+          <th><button class="sort" type="button" data-key="status">Status</button></th>
+          <th><button class="sort" type="button" data-key="score">Score</button></th>
+          <th><button class="sort" type="button" data-key="close">Close</button></th>
+          <th><button class="sort" type="button" data-key="rsi">RSI</button></th>
+          <th><button class="sort" type="button" data-key="rsi_min7">RSI 7d low</button></th>
+          <th><button class="sort" type="button" data-key="macd_hist">MACD hist</button></th>
+          <th><button class="sort" type="button" data-key="hist_rising">Hist</button></th>
+          <th><button class="sort" type="button" data-key="vs_sma50_pct">vs 50d %</button></th>
+          <th><button class="sort" type="button" data-key="vs_sma20_pct">vs 20d %</button></th>
+          <th><button class="sort" type="button" data-key="above_sma200">Above 200d</button></th>
+          <th><button class="sort" type="button" data-key="dollar_vol20_M">$ vol 20d (M)</button></th>
+          <th><button class="sort" type="button" data-key="next_earnings">Next earnings</button></th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p class="foot">Earnings dates come from the data provider and can be wrong. A struck-through date has already passed. Check the real date before buying short-dated calls.</p>
+  </section>
+
+  <details id="rules">
+    <summary>How each setup is defined</summary>
+    <div class="rules">
+      <div><h3>Reversal</h3><p>Based on MCD (+349%) and DAL (+253%). In the last 7 days RSI hit 33 or lower and the close sat 5% or more below the 50-day SMA. <b>Triggered</b>: MACD crossed above its signal in the last 2 days. <b>Turned</b>: crossed 3 to 7 days ago, histogram still positive, RSI under 60 and close still at or below the 50-day. <b>Watch</b>: histogram below zero but rising. <b>Early</b>: oversold and histogram still falling.</p></div>
+      <div><h3>Momentum</h3><p>Based on AAPL (+116%). Pullback in an uptrend: RSI 45 to 60, MACD above zero and above its signal, close 0 to 3% above the 50-day SMA.</p></div>
+      <div><h3>Squeeze</h3><p>Bollinger bandwidth in the tightest 20% of the last 6 months, close within 3% of the 20-day high and above the 50-day SMA.</p></div>
+      <div><h3>Avoid</h3><p>Based on UBER (−26%). RSI 38 to 46, MACD histogram flat near zero, close 4% or more below the 50-day SMA. A slow drift where time decay eats calls.</p></div>
+      <p>Only stocks above $10 with at least $100M average daily dollar volume are scanned. A stock that fits more than one setup shows only the first, in the order above. These are rule matches, not predictions or advice.</p>
+    </div>
+  </details>
+  <p class="foot" id="source"></p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+(function () {
+  var ORDER = {REVERSAL: 0, MOMENTUM: 1, SQUEEZE: 2, AVOID: 3};
+  var RANK = {TRIGGERED: 0, TURNED: 1, WATCH: 2, EARLY: 3};
+  var COLOR = {REVERSAL: 'var(--c-rev)', MOMENTUM: 'var(--c-mom)', SQUEEZE: 'var(--c-sq)', AVOID: 'var(--c-avoid)'};
+  var TILES = [
+    ['REVERSAL', 'TRIGGERED', 'Reversal · Triggered', 'MACD crossed up, last 2 days'],
+    ['REVERSAL', 'TURNED', 'Reversal · Turned', 'Crossed 3–7 days ago'],
+    ['REVERSAL', 'WATCH', 'Reversal · Watch', 'Oversold, selling fading'],
+    ['REVERSAL', 'EARLY', 'Reversal · Early', 'Still falling'],
+    ['MOMENTUM', 'TRIGGERED', 'Momentum', 'Pullback in an uptrend'],
+    ['SQUEEZE', 'WATCH', 'Squeeze', 'Tight bands near highs'],
+    ['AVOID', 'drift', 'Avoid', 'Slow drift, theta trap']
+  ];
+  var REFRESH_MS = 5 * 60 * 1000;
+  var fmtDate = d3.utcFormat('%a %b %-d, %Y');
+  var fmtShort = d3.utcFormat('%b %-d');
+  var data = {meta: {}, rows: []};
+  var state = {setup: 'ALL', q: '', key: null, dir: -1};
+  var lastStamp = null;
+
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+  function utc(s) { return s ? new Date(String(s).slice(0, 10) + 'T00:00:00Z') : null; }
+  function fx(v, d) { return v == null || isNaN(v) ? '—' : Number(v).toFixed(d); }
+  function hot(r) { return r.setup === 'REVERSAL' && (r.status === 'TRIGGERED' || r.status === 'TURNED'); }
+  function pillClass(r) {
+    if (r.setup === 'AVOID') return 'pill avoid';
+    if (r.status === 'TRIGGERED' || r.status === 'TURNED') return 'pill go';
+    if (r.status === 'WATCH') return 'pill watch';
+    return 'pill';
+  }
+  function title(s) { return s.charAt(0) + s.slice(1).toLowerCase(); }
+  function earningsInfo(r) {
+    var e = utc(r.next_earnings), b = utc(r.bar_date);
+    if (!e || !b || isNaN(e)) return {cls: '', note: ''};
+    var days = Math.round((e - b) / 864e5);
+    if (days < 0) return {cls: 'stale', note: 'Date already passed; check it'};
+    if (days <= 14) return {cls: 'warn', note: days === 0 ? 'Earnings today' : 'Earnings in ' + days + ' day' + (days === 1 ? '' : 's')};
+    return {cls: '', note: ''};
+  }
+  function defaultSort(a, b) {
+    return (ORDER[a.setup] - ORDER[b.setup]) || ((RANK[a.status] ?? 4) - (RANK[b.status] ?? 4)) || (b.score - a.score);
+  }
+  function ago(iso) {
+    var m = Math.round((Date.now() - new Date(iso)) / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return m + ' min ago';
+    var h = Math.round(m / 60);
+    if (h < 48) return h + ' hr ago';
+    return Math.round(h / 24) + ' days ago';
+  }
+
+  function renderHeader() {
+    var m = data.meta, rows = data.rows;
+    var n = function (s, st) { return rows.filter(function (r) { return r.setup === s && r.status === st; }).length; };
+    var ageH = m.generated_at ? (Date.now() - new Date(m.generated_at)) / 36e5 : 999;
+    var live = $('live');
+    live.classList.toggle('is-provisional', !!m.provisional);
+    live.classList.toggle('is-stale', ageH > 30);
+    $('live-text').textContent = ageH > 30 ? 'Out of date' : m.provisional ? 'Intraday · provisional' : 'After close';
+    $('updated').textContent = m.generated_at ? 'Updated ' + ago(m.generated_at) : '';
+    $('provisional').hidden = !m.provisional;
+    var lede = $('lede'); lede.replaceChildren();
+    if (!m.bar_date) { lede.textContent = 'No scan has run yet.'; return; }
+    function b(t) { return el('b', '', String(t)); }
+    lede.append((m.provisional ? 'Using prices so far on ' : 'As of the close on '), b(fmtDate(utc(m.bar_date))), ', ',
+      b(rows.length), ' liquid S&P 500 stocks match a setup. ',
+      b(n('REVERSAL', 'TRIGGERED')), ' reversals triggered in the last two days, ',
+      b(n('REVERSAL', 'TURNED')), ' turned earlier, and ',
+      b(n('REVERSAL', 'WATCH')), ' are oversold with selling fading.');
+    $('source').textContent = 'Data: ' + (m.source === 'alpaca' ? 'Alpaca Market Data (SIP, 15 min delayed)' : 'Yahoo Finance') +
+      ' · ' + (m.with_data || 0) + ' of ' + (m.universe || 0) + ' S&P 500 tickers scanned · generated ' +
+      (m.generated_at ? new Date(m.generated_at).toLocaleString() : '—');
+  }
+
+  function renderTiles() {
+    var box = $('tiles'); box.replaceChildren();
+    TILES.forEach(function (t) {
+      var count = data.rows.filter(function (r) { return r.setup === t[0] && r.status === t[1]; }).length;
+      var tile = el('div', 'tile');
+      var lab = el('span', 'tile-label'); lab.append(el('i', 'dot d-' + t[0]), t[2]);
+      tile.append(lab, el('span', 'tile-n', String(count)), el('span', 'tile-note', t[3]));
+      box.append(tile);
+    });
+  }
+
+  function renderReady() {
+    var box = $('ready-cards'); box.replaceChildren();
+    var ready = data.rows.filter(hot).sort(defaultSort);
+    if (!ready.length) { box.append(el('p', 'empty', 'No reversal has triggered or turned right now. The Watch list below is where the next ones come from.')); return; }
+    ready.forEach(function (r) {
+      var card = el('article', 'card'); card.id = 'ready-' + r.ticker;
+      var top = el('div', 'card-top'); top.append(el('span', 'tkr', r.ticker), el('span', pillClass(r), title(r.status)));
+      var kv = el('dl', 'kv');
+      var ei = earningsInfo(r);
+      [['Close', fx(r.close, 2)], ['RSI now', fx(r.rsi, 1)], ['RSI 7-day low', fx(r.rsi_min7, 1)],
+       ['vs 50-day', fx(r.vs_sma50_pct, 1) + '%'], ['Score', fx(r.score, 1)],
+       ['Next earnings', r.next_earnings ? fmtShort(utc(r.next_earnings)) : '—', ei.cls]].forEach(function (p) {
+        kv.append(el('dt', '', p[0]), el('dd', p[2] || '', p[1]));
+      });
+      card.append(top, kv);
+      if (ei.note) card.append(el('span', 'cap ' + (ei.cls === 'warn' ? 'warn' : 'muted'), ei.note));
+      box.append(card);
+    });
+  }
+
+  function renderChart() {
+    var node = $('chart'); node.replaceChildren();
+    var rows = data.rows.filter(function (r) { return r.rsi != null && r.vs_sma50_pct != null; });
+    if (!rows.length) { node.append(el('p', 'empty', 'No hits to plot.')); return; }
+    var W = Math.max(280, node.clientWidth - 16), H = Math.round(Math.max(260, Math.min(420, W * 0.55)));
+    var m = {t: 20, r: 16, b: 40, l: 50};
+    var x = d3.scaleLinear().domain([Math.min(15, d3.min(rows, function (d) { return d.rsi; }) - 2), Math.max(85, d3.max(rows, function (d) { return d.rsi; }) + 2)]).range([m.l, W - m.r]);
+    var ye = d3.extent(rows, function (d) { return d.vs_sma50_pct; });
+    var y = d3.scaleLinear().domain([Math.min(-5, ye[0] - 2), Math.max(5, ye[1] + 2)]).nice().range([H - m.b, m.t]);
+    var svg = d3.select(node).append('svg').attr('width', '100%').attr('height', H).attr('viewBox', '0 0 ' + W + ' ' + H)
+      .attr('role', 'img').attr('aria-label', 'Scatter of every hit: RSI across, percent from the 50-day average up and down, colored by setup.');
+    svg.append('rect').attr('class', 'band').attr('x', m.l).attr('y', m.t).attr('width', Math.max(0, x(33) - m.l)).attr('height', H - m.b - m.t);
+    svg.append('text').attr('class', 'axlab').attr('x', x(33) - 4).attr('y', m.t - 6).attr('text-anchor', 'end').text('RSI ≤ 33');
+    svg.append('g').attr('transform', 'translate(' + m.l + ',0)')
+      .call(d3.axisLeft(y).ticks(Math.max(3, Math.floor((H - m.t - m.b) / 45))).tickSize(-(W - m.l - m.r)).tickFormat(function (v) { return v + '%'; }))
+      .call(function (g) { g.select('.domain').remove(); });
+    svg.append('g').attr('transform', 'translate(0,' + (H - m.b) + ')').call(d3.axisBottom(x).ticks(Math.max(3, Math.floor((W - m.l - m.r) / 70))).tickSizeOuter(0));
+    svg.append('line').attr('class', 'ref').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(0)).attr('y2', y(0));
+    svg.append('text').attr('class', 'axlab').attr('x', (m.l + W - m.r) / 2).attr('y', H - 6).attr('text-anchor', 'middle').text('RSI (14)');
+    svg.append('text').attr('class', 'axlab').attr('transform', 'rotate(-90)').attr('x', -(m.t + H - m.b) / 2).attr('y', 12).attr('text-anchor', 'middle').text('% vs 50-day SMA');
+
+    var tip = el('div', 'tip'); tip.hidden = true; node.append(tip);
+    function show(ev, d) {
+      tip.replaceChildren(el('b', '', d.ticker), ' ', el('span', 'muted', title(d.setup) + ' · ' + d.status.toLowerCase()),
+        document.createElement('br'), el('span', 'muted', 'RSI ' + fx(d.rsi, 1) + ' · ' + fx(d.vs_sma50_pct, 1) + '% vs 50d · score ' + fx(d.score, 1)));
+      tip.hidden = false;
+      var p = d3.pointer(ev, node), tw = tip.offsetWidth, th = tip.offsetHeight;
+      tip.style.left = Math.min(Math.max(4, p[0] + 12), node.clientWidth - tw - 4) + 'px';
+      tip.style.top = (p[1] - th - 10 < 0 ? p[1] + 14 : p[1] - th - 10) + 'px';
+    }
+    svg.append('g').selectAll('circle').data(rows.slice().sort(function (a, b) { return hot(a) - hot(b); })).join('circle')
+      .attr('cx', function (d) { return x(d.rsi); }).attr('cy', function (d) { return y(d.vs_sma50_pct); })
+      .attr('r', function (d) { return hot(d) ? 6.5 : 4.5; })
+      .style('fill', function (d) { return COLOR[d.setup]; })
+      .style('fill-opacity', function (d) { return hot(d) ? 1 : 0.7; })
+      .style('stroke', function (d) { return hot(d) ? 'var(--fg)' : 'var(--panel)'; })
+      .style('stroke-width', function (d) { return hot(d) ? 1.5 : 1; })
+      .style('cursor', 'pointer')
+      .on('pointerenter pointermove pointerdown', show)
+      .on('pointerleave', function () { tip.hidden = true; });
+    var placed = [];
+    svg.append('g').selectAll('text').data(rows.filter(hot)).join('text').attr('class', 'lbl')
+      .attr('x', function (d) { return x(d.rsi) + 9; }).attr('y', function (d) { return y(d.vs_sma50_pct) + 4; })
+      .text(function (d) { return d.ticker; })
+      .each(function () {
+        var b = this.getBBox();
+        var hit = placed.some(function (p) { return b.x < p.x + p.width + 2 && b.x + b.width + 2 > p.x && b.y < p.y + p.height && b.y + b.height > p.y; });
+        if (hit || b.x + b.width > W) this.remove(); else placed.push(b);
+      });
+  }
+
+  function renderTable() {
+    var tbody = $('rows'); tbody.replaceChildren();
+    var rows = data.rows.filter(function (r) { return (state.setup === 'ALL' || r.setup === state.setup) && (!state.q || r.ticker.indexOf(state.q) >= 0); });
+    if (state.key) {
+      var k = state.key, dir = state.dir;
+      rows.sort(function (a, b) {
+        var va = a[k], vb = b[k];
+        if (va == null || va === '') return 1; if (vb == null || vb === '') return -1;
+        return (va > vb ? 1 : va < vb ? -1 : 0) * dir;
+      });
+    } else rows.sort(defaultSort);
+    $('shown').textContent = rows.length + ' of ' + data.rows.length + ' shown';
+    if (!rows.length) {
+      var tr0 = el('tr'), td0 = el('td', 'empty', 'No stocks match this filter.'); td0.colSpan = 14; tr0.append(td0); tbody.append(tr0); return;
+    }
+    rows.forEach(function (r) {
+      var tr = el('tr'), ei = earningsInfo(r);
+      var stat = el('td'); stat.append(el('span', pillClass(r), r.status));
+      var earn = el('td', ei.cls, r.next_earnings || '—'); if (ei.note) earn.title = ei.note;
+      tr.append(
+        el('td', '', r.ticker), el('td', '', title(r.setup)), stat,
+        el('td', '', fx(r.score, 1)), el('td', '', fx(r.close, 2)), el('td', '', fx(r.rsi, 1)), el('td', '', fx(r.rsi_min7, 1)),
+        el('td', r.macd_hist < 0 ? 'neg' : '', fx(r.macd_hist, 3)),
+        el('td', r.hist_rising ? 'up' : 'muted', r.hist_rising ? '↑ rising' : '↓ falling'),
+        el('td', r.vs_sma50_pct < 0 ? 'neg' : '', fx(r.vs_sma50_pct, 1)),
+        el('td', r.vs_sma20_pct < 0 ? 'neg' : '', fx(r.vs_sma20_pct, 1)),
+        el('td', '', r.above_sma200 == null ? '—' : r.above_sma200 ? 'Yes' : 'No'),
+        el('td', '', r.dollar_vol20_M == null ? '—' : d3.format(',')(r.dollar_vol20_M)),
+        earn);
+      tbody.append(tr);
+    });
+  }
+
+  function renderAll() { renderHeader(); renderTiles(); renderReady(); renderChart(); renderTable(); }
+
+  function load() {
+    return fetch('data/latest.json?t=' + Date.now(), {cache: 'no-store'})
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (j) {
+        if (j.meta && j.meta.generated_at === lastStamp) { renderHeader(); return; }
+        lastStamp = j.meta && j.meta.generated_at;
+        data = {meta: j.meta || {}, rows: j.rows || []};
+        renderAll();
+      })
+      .catch(function (e) {
+        if (!lastStamp) $('lede').textContent = 'Could not load the scan (' + e.message + '). It may not have run yet.';
+      });
+  }
+
+  document.querySelectorAll('.chip').forEach(function (b) {
+    b.addEventListener('click', function () {
+      state.setup = b.getAttribute('data-setup');
+      document.querySelectorAll('.chip').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+      renderTable();
+    });
+  });
+  $('search').addEventListener('input', function (e) { state.q = e.target.value.trim().toUpperCase(); renderTable(); });
+  document.querySelectorAll('.sort').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var k = b.getAttribute('data-key');
+      if (state.key === k) state.dir = -state.dir;
+      else { state.key = k; state.dir = ['ticker', 'setup', 'status', 'next_earnings'].indexOf(k) >= 0 ? 1 : -1; }
+      document.querySelectorAll('th').forEach(function (th) { th.removeAttribute('aria-sort'); });
+      b.closest('th').setAttribute('aria-sort', state.dir > 0 ? 'ascending' : 'descending');
+      renderTable();
+    });
+  });
+  var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(renderChart, 150); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) load(); });
+  setInterval(function () { if (!document.hidden) load(); }, REFRESH_MS);
+  load();
+})();
+</script>
+</body>
+</html>
