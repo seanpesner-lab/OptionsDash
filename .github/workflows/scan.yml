@@ -14,6 +14,10 @@ on:
         description: "Send the top-10 email now (a test, even if the market is open)"
         type: boolean
         default: false
+      morning_catchup:
+        description: "Missed this morning's email? Rerun it now on yesterday's close, send it and log today's picks"
+        type: boolean
+        default: false
 
 permissions:
   contents: write   # commit the daily history file
@@ -55,6 +59,7 @@ jobs:
           ALPACA_API_KEY_ID: ${{ secrets.ALPACA_API_KEY_ID }}
           ALPACA_API_SECRET_KEY: ${{ secrets.ALPACA_API_SECRET_KEY }}
           ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
+          MORNING_CATCHUP: ${{ inputs.morning_catchup == true && '1' || '' }}
         run: |
           if [ -z "$ALPACA_API_KEY_ID" ] || [ -z "$ALPACA_API_SECRET_KEY" ]; then
             echo "::error::Add the ALPACA_API_KEY_ID and ALPACA_API_SECRET_KEY repository secrets."
@@ -107,7 +112,9 @@ jobs:
           d=$(jq -r .meta.bar_date site/data/latest.json)
           sent=no
           if [ -f history/picks.csv ] && cut -d, -f2 history/picks.csv | grep -qx "$today"; then sent=yes; fi
-          if [ "${{ inputs.send_email }}" = "true" ]; then
+          if [ "${{ inputs.morning_catchup }}" = "true" ] && [ "$sent" = "no" ] && [ "$prov" = "false" ] && [ "$d" != "$today" ]; then
+            echo "send=daily" >> "$GITHUB_OUTPUT"
+          elif [ "${{ inputs.send_email }}" = "true" ]; then
             echo "send=test" >> "$GITHUB_OUTPUT"
           elif [ "$dow" -le 5 ] && [ "$hhmm" -lt 1100 ] && [ "$prov" = "false" ] && [ "$d" != "$today" ] && [ "$sent" = "no" ]; then
             echo "send=daily" >> "$GITHUB_OUTPUT"

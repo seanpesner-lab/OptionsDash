@@ -217,14 +217,14 @@ def fetch_alpaca(tickers, key, secret, feed="sip", days=740, min_bars=61):
     return frames
 
 
-def drop_premarket(frames, now_et):
-    """Before the 9:30 AM open, drop a bar dated today.
+def drop_premarket(frames, now_et, force=False):
+    """Before the 9:30 AM open (or always, with force), drop a bar dated today.
 
     Alpaca's daily bars include pre-market trades, so from about 4 AM there is a thin bar
     for today. Before the open the last complete day is yesterday, and the morning scan and
-    email should use that close.
+    email should use that close. force=True is for a late catch-up of a missed morning run.
     """
-    if now_et.time() >= dt.time(9, 30):
+    if not force and now_et.time() >= dt.time(9, 30):
         return frames
     today = pd.Timestamp(now_et.date())
     out = {}
@@ -292,7 +292,8 @@ def main():
     else:
         frames = fetch_yahoo(tickers)
     if not args.asof:
-        frames = drop_premarket(frames, dt.datetime.now(ET))
+        # MORNING_CATCHUP=1: rerun a missed morning scan later in the day, on the previous close.
+        frames = drop_premarket(frames, dt.datetime.now(ET), force=os.environ.get("MORNING_CATCHUP") == "1")
     print(f"Got bars for {len(frames)} tickers.", file=sys.stderr)
 
     rows = []
