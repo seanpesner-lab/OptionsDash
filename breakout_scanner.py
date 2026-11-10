@@ -217,6 +217,24 @@ def fetch_alpaca(tickers, key, secret, feed="sip", days=740, min_bars=61):
     return frames
 
 
+def drop_premarket(frames, now_et):
+    """Before the 9:30 AM open, drop a bar dated today.
+
+    Alpaca's daily bars include pre-market trades, so from about 4 AM there is a thin bar
+    for today. Before the open the last complete day is yesterday, and the morning scan and
+    email should use that close.
+    """
+    if now_et.time() >= dt.time(9, 30):
+        return frames
+    today = pd.Timestamp(now_et.date())
+    out = {}
+    for t, df in frames.items():
+        if len(df) and df.index[-1].normalize() == today:
+            df = df.iloc[:-1]
+        out[t] = df
+    return out
+
+
 # ---------------------------------------------------------------- earnings
 
 def earnings_alphavantage(key, cache_dir=".cache", max_age_h=20):
@@ -273,6 +291,8 @@ def main():
         frames = fetch_alpaca(tickers, key, secret, os.environ.get("ALPACA_FEED", "sip"))
     else:
         frames = fetch_yahoo(tickers)
+    if not args.asof:
+        frames = drop_premarket(frames, dt.datetime.now(ET))
     print(f"Got bars for {len(frames)} tickers.", file=sys.stderr)
 
     rows = []
