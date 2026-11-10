@@ -45,6 +45,25 @@ The morning run also appends that day's top 10, with the best-fit call and its q
 
 Picks made since the last close are listed but left out of the averages until they've had a trading day to move.
 
+## Reliable timing with cron-job.org
+
+GitHub's own schedule is best effort and can run hours late or skip runs. An outside timer that starts the workflow through GitHub's API runs on time. The workflow sends the email and records picks only once a day, so it's fine if both GitHub and the timer start it.
+
+1. **Token.** In GitHub, go to Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token. Set Repository access to *Only select repositories* → OptionsDash, and under Repository permissions set **Actions: Read and write**. Copy the token.
+2. **Timer.** Sign up at cron-job.org. In Settings, set the time zone to America/New_York. Create a cronjob:
+   - URL: `https://api.github.com/repos/seanpesner-lab/OptionsDash/actions/workflows/scan.yml/dispatches`
+   - Schedule: weekdays (Mon–Fri) at 7:30
+   - Advanced → Request method: **POST**
+   - Advanced → Headers:
+     - `Accept`: `application/vnd.github+json`
+     - `Authorization`: `Bearer <your token>`
+     - `X-GitHub-Api-Version`: `2022-11-28`
+   - Advanced → Request body: `{"ref":"main"}`
+3. **Intraday runs.** Clone that job and set its schedule to weekdays, hours 9–16, minutes 0, 15, 30 and 45.
+4. **Test.** Use "Test run". A response of **204** means GitHub accepted it, and a new run appears in the Actions tab.
+
+The token expires on the date you chose. When it does, generate a new one and replace it in both jobs.
+
 ## Running locally
 
 ```bash
