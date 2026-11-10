@@ -32,6 +32,7 @@
   --ok: #4ade80; --warn: #f2b544; --bad: #fb8a5c; color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--sans); }
 .wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 56px;
@@ -149,6 +150,26 @@ summary { cursor: pointer; font-weight: 500; }
 .flag { font-family: var(--sans); font-size: 0.72rem; font-weight: 500; color: var(--warn); }
 table.otab th:nth-child(-n+2), table.otab td:nth-child(-n+2) { text-align: left; }
 table.otab td:first-child { font-weight: 400; }
+
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px 14px; align-items: start; }
+.fld { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; min-width: 0; }
+.fld > span { color: var(--muted); font-weight: 500; }
+.fld small { color: var(--muted); font-size: 0.72rem; }
+.fld input, .dash-sel { font: inherit; font-size: 0.9rem; padding: 7px 10px; border-radius: var(--r); border: 1px solid var(--line);
+  background: var(--panel); color: var(--fg); width: 100%; min-width: 0; }
+.fld input:focus-visible, .dash-sel:focus-visible, .btn:focus-visible { outline: 2px solid var(--c-rev); outline-offset: 1px; }
+.fld input[aria-invalid="true"] { border-color: var(--bad); }
+.fld.actions { flex-direction: row; align-items: end; align-self: end; gap: 8px; }
+.tradeform { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; }
+.tradeform .cap { grid-column: 1 / -1; margin: 0; }
+.btn { font: inherit; font-size: 0.85rem; font-weight: 500; padding: 7px 14px; border-radius: var(--r); border: 1px solid var(--line);
+  background: var(--panel); color: var(--fg); cursor: pointer; display: inline-block; }
+.btn.primary { background: var(--c-rev); border-color: var(--c-rev); color: var(--bg); }
+.btn.danger { color: var(--bad); }
+.btn.small { padding: 3px 9px; font-size: 0.75rem; }
+.taxtab td:first-child { font-family: var(--sans); color: var(--muted); }
+.taxtab tr.total td { font-weight: 600; color: var(--fg); }
+.rowbtns { display: flex; gap: 6px; justify-content: flex-end; }
 @media (prefers-reduced-motion: no-preference) { .card, .tile { transition: border-color .2s; } .card:hover { border-color: var(--muted); } }
 </style>
 </head>
@@ -169,6 +190,7 @@ table.otab td:first-child { font-weight: 400; }
     <button class="tab" type="button" role="tab" id="tabbtn-scanner" data-tab="scanner" aria-selected="true" aria-controls="tab-scanner">Scanner</button>
     <button class="tab" type="button" role="tab" id="tabbtn-options" data-tab="options" aria-selected="false" aria-controls="tab-options">Options</button>
     <button class="tab" type="button" role="tab" id="tabbtn-track" data-tab="track" aria-selected="false" aria-controls="tab-track">Track record</button>
+    <button class="tab" type="button" role="tab" id="tabbtn-taxes" data-tab="taxes" aria-selected="false" aria-controls="tab-taxes">Taxes</button>
   </nav>
 
   <div class="tabpanel" id="tab-scanner" role="tabpanel" aria-labelledby="tabbtn-scanner">
@@ -312,10 +334,94 @@ table.otab td:first-child { font-weight: 400; }
     </section>
   </div>
 
+  <div class="tabpanel" id="tab-taxes" role="tabpanel" aria-labelledby="tabbtn-taxes" hidden>
+    <p class="banner">Private to this browser. Your income and trades are saved only on this device and are never sent anywhere. Use Export to back them up or move them to another device.</p>
+
+    <section class="sec" id="tax-summary">
+      <div class="sec-head">
+        <h2>2026 year to date</h2>
+        <p>Estimated tax caused by your closed trades: the difference between your tax with and without them.</p>
+      </div>
+      <div class="tiles" id="tax-tiles"></div>
+      <div class="tablewrap">
+        <table class="otab taxtab"><tbody id="tax-breakdown"></tbody></table>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head">
+        <h2>Your tax situation</h2>
+        <p>Rough numbers are fine. Changes save as you type.</p>
+      </div>
+      <div class="form-grid" id="tax-profile">
+        <label class="fld"><span>Filing status</span>
+          <select class="dash-sel" id="tp-status">
+            <option value="single">Single</option>
+            <option value="mfj">Married filing jointly</option>
+            <option value="mfs">Married filing separately</option>
+            <option value="hoh">Head of household</option>
+          </select></label>
+        <label class="fld"><span>Other income for 2026 ($)</span><input id="tp-other" type="number" min="0" step="1000" inputmode="numeric" placeholder="e.g. 85000"><small>Wages, interest, etc., before deductions</small></label>
+        <label class="fld"><span>Itemized deductions ($)</span><input id="tp-itemized" type="number" min="0" step="100" inputmode="numeric" placeholder="Blank = standard"><small id="tp-std-note"></small></label>
+        <label class="fld"><span>State income tax rate (%)</span><input id="tp-state" type="number" min="0" max="15" step="0.1" inputmode="decimal" placeholder="e.g. 5"><small>Your top state rate; 0 for FL, TX, etc.</small></label>
+        <label class="fld"><span>Loss carried over from 2025: short-term ($)</span><input id="tp-cst" type="number" min="0" step="100" inputmode="numeric" placeholder="0"></label>
+        <label class="fld"><span>Loss carried over from 2025: long-term ($)</span><input id="tp-clt" type="number" min="0" step="100" inputmode="numeric" placeholder="0"></label>
+      </div>
+    </section>
+
+    <section class="sec" id="tax-trades">
+      <div class="sec-head">
+        <h2>Closed trades</h2>
+        <p>Add each trade when you close it. Prices are per share as quoted (a 2.50 call costs $250 per contract). Use a sell price of 0 for a call that expired worthless.</p>
+      </div>
+      <form class="form-grid tradeform" id="trade-form" novalidate>
+        <label class="fld"><span>Ticker</span><input id="tf-ticker" type="text" maxlength="8" autocomplete="off" placeholder="NFLX" required></label>
+        <label class="fld"><span>Type</span>
+          <select class="dash-sel" id="tf-kind"><option value="call">Call option</option><option value="put">Put option</option><option value="shares">Shares</option></select></label>
+        <label class="fld"><span id="tf-qty-label">Contracts</span><input id="tf-qty" type="number" min="0" step="1" inputmode="numeric" required></label>
+        <label class="fld"><span>Buy price</span><input id="tf-buy" type="number" min="0" step="0.01" inputmode="decimal" required></label>
+        <label class="fld"><span>Sell price</span><input id="tf-sell" type="number" min="0" step="0.01" inputmode="decimal" required></label>
+        <label class="fld"><span>Fees, total ($)</span><input id="tf-fees" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0"></label>
+        <label class="fld"><span>Opened</span><input id="tf-opened" type="date" required></label>
+        <label class="fld"><span>Closed</span><input id="tf-closed" type="date" required></label>
+        <label class="fld"><span>Wash-sale loss disallowed ($)</span><input id="tf-wash" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Optional"><small>From your broker's 1099-B</small></label>
+        <div class="fld actions">
+          <button class="btn primary" type="submit" id="tf-submit">Add trade</button>
+          <button class="btn" type="button" id="tf-cancel" hidden>Cancel edit</button>
+        </div>
+        <p class="cap warn" id="tf-error" hidden></p>
+      </form>
+      <div class="tablewrap">
+        <table class="otab">
+          <thead><tr><th>Closed</th><th>Ticker</th><th>Type</th><th>Qty</th><th>Buy</th><th>Sell</th><th>Fees</th><th>Gain</th><th>Term</th><th></th></tr></thead>
+          <tbody id="trade-rows"></tbody>
+        </table>
+      </div>
+      <div class="tools">
+        <button class="btn" type="button" id="tx-export">Export backup</button>
+        <label class="btn" for="tx-import">Import backup</label>
+        <input id="tx-import" type="file" accept="application/json,.json" hidden>
+        <button class="btn danger" type="button" id="tx-clear">Delete all</button>
+        <span class="cap" id="tx-status" role="status"></span>
+      </div>
+    </section>
+
+    <details>
+      <summary>How the estimate works</summary>
+      <div class="rules">
+        <p>Uses 2026 federal brackets, standard deductions and capital gains thresholds from IRS Rev. Proc. 2025-32. Options held one year or less are short-term and taxed like wages; held longer, they get long-term rates (0%, 15% or 20%). Short- and long-term results are netted the way Schedule D does it. A net loss offsets up to $3,000 of other income ($1,500 if married filing separately), and the rest carries over to 2027.</p>
+        <p>The 3.8% net investment income tax applies to gains above $200,000 of income ($250,000 married filing jointly, $125,000 separately). State tax is a flat approximation at the rate you enter. The estimate doesn't include AMT, credits, phase-outs, or Section 1256 contracts such as SPX index options, which get 60/40 treatment.</p>
+        <p><b>Wash sales:</b> if you close at a loss and buy the same or a substantially identical position within 30 days before or after, the loss is deferred. Trades that look like that are flagged; enter the disallowed amount from your 1099-B to apply it.</p>
+        <p>This is an estimate to help you plan and set money aside, not tax advice. Your broker's 1099-B is the official record. Check with a tax professional before you file.</p>
+      </div>
+    </details>
+  </div>
+
   <p class="foot" id="source"></p>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="tax.js"></script>
 <script>
 (function () {
   var ORDER = {REVERSAL: 0, MOMENTUM: 1, SQUEEZE: 2, AVOID: 3};
@@ -638,12 +744,168 @@ table.otab td:first-child { font-weight: 400; }
       .catch(function () { if (!trkStamp) renderTrack({meta: {}, summary: {}, picks: []}); });
   }
 
+  // ---------------------------------------------------------------- taxes tab (browser-only storage)
+  var TAX_KEY = 'optionsdash.taxes.v1', TAX_YEAR = 2026;
+  var money = d3.format('$,.0f'), money2 = d3.format('$,.2f');
+  var tax = {profile: {status: 'single'}, trades: []};
+  var editingId = null;
+  function taxLoad() {
+    try { var s = JSON.parse(localStorage.getItem(TAX_KEY) || 'null'); if (s && s.trades) tax = s; } catch (e) {}
+    tax.profile = tax.profile || {status: 'single'};
+  }
+  function taxSave() {
+    try { localStorage.setItem(TAX_KEY, JSON.stringify(tax)); return true; }
+    catch (e) { $('tx-status').textContent = 'Could not save in this browser (private mode?). Export a backup to keep your entries.'; return false; }
+  }
+  function signedMoney(v) { return (v < 0 ? '−' : '') + money(Math.abs(v)); }
+  function yearOf(d) { return d ? Number(String(d).slice(0, 4)) : null; }
+  var PROFILE_FIELDS = {status: 'tp-status', otherIncome: 'tp-other', itemized: 'tp-itemized', stateRate: 'tp-state', carryST: 'tp-cst', carryLT: 'tp-clt'};
+  function fillProfile() {
+    Object.keys(PROFILE_FIELDS).forEach(function (k) { var v = tax.profile[k]; $(PROFILE_FIELDS[k]).value = v == null ? (k === 'status' ? 'single' : '') : v; });
+  }
+  function renderTaxes() {
+    if (!window.Tax) { $('tax-tiles').replaceChildren(el('p', 'empty', 'The tax calculator failed to load.')); return; }
+    var y = Tax.YEARS[TAX_YEAR], p = tax.profile;
+    $('tp-std-note').textContent = 'Standard deduction: ' + money(y.standard[p.status || 'single']);
+    var inYear = tax.trades.filter(function (t) { return yearOf(t.closed) === TAX_YEAR; });
+    var e = Tax.estimate(TAX_YEAR, p, inYear);
+    var f = e.federal;
+
+    var tiles = $('tax-tiles'); tiles.replaceChildren();
+    function tile(label, value, note, cls) {
+      var d = el('div', 'tile'); var n = el('span', 'tile-n' + (cls ? ' ' + cls : ''), value);
+      d.append(el('span', 'tile-label', label), n, el('span', 'tile-note', note)); tiles.append(d);
+    }
+    tile('Net gain', signedMoney(e.netGain), inYear.length + ' trade' + (inYear.length === 1 ? '' : 's') + ' · short ' + signedMoney(e.tradingST) + ' · long ' + signedMoney(e.tradingLT), e.netGain > 0 ? 'up' : e.netGain < 0 ? 'neg' : '');
+    tile('Tax from trading', signedMoney(e.totalFromTrading), e.effectiveRate == null ? (e.totalFromTrading < 0 ? 'losses lower your tax' : 'no gains yet') : d3.format('.0%')(e.effectiveRate) + ' of your gains');
+    tile('You keep', signedMoney(e.keep), 'after estimated tax');
+    tile('Set aside', money(e.setAside), 'next estimated payment ' + nextDue(e.estimatedDue));
+
+    var tb = $('tax-breakdown'); tb.replaceChildren();
+    function line(label, v, cls) { var tr = el('tr', cls || ''); tr.append(el('td', '', label), el('td', '', v)); tb.append(tr); }
+    line('Federal income tax from trading', signedMoney(e.federalFromTrading - e.niit));
+    line('Net investment income tax (3.8%)', money(e.niit));
+    line('State tax (' + (Number(p.stateRate) || 0) + '%)', signedMoney(e.state));
+    line('Total from trading', signedMoney(e.totalFromTrading), 'total');
+    line('Your federal bracket', d3.format('.0%')(f.marginal) + ' on ordinary income');
+    line('Tax on your next $1,000 of short-term gain', money(e.nextRate * 1000));
+    if (f.preferential > 0) line('Long-term gains taxed at 0% / 15% / 20%', money(f.ltAt0) + ' / ' + money(f.ltAt15) + ' / ' + money(f.ltAt20));
+    if (f.lossDeduction > 0) line('Net loss deducted from other income', money(f.lossDeduction));
+    if (f.carryover > 0) line('Loss carried over to 2027', money(f.carryover));
+    line('Total federal tax for 2026 (all income)', money(f.total));
+
+    var flags = Tax.washFlags(tax.trades);
+    var rows = $('trade-rows'); rows.replaceChildren();
+    var order = tax.trades.map(function (t, i) { return i; }).sort(function (a, b) { return String(tax.trades[b].closed).localeCompare(String(tax.trades[a].closed)); });
+    if (!order.length) {
+      var tr0 = el('tr'), td0 = el('td', 'empty', 'No trades yet. Add your first closed trade above.'); td0.colSpan = 10; tr0.append(td0); rows.append(tr0);
+    }
+    order.forEach(function (i) {
+      var t = tax.trades[i], r = Tax.tradeResult(t), tr = el('tr');
+      var term = el('td', '', r.term === 'long' ? 'Long' : 'Short');
+      if (yearOf(t.closed) !== TAX_YEAR) { term.append(' '); term.append(el('span', 'flag', 'not ' + TAX_YEAR)); }
+      if (flags[i] && !(Number(t.disallowed) > 0)) { term.append(' '); var w = el('span', 'flag', 'possible wash sale'); w.title = 'Same ticker opened within 30 days of this loss'; term.append(w); }
+      var kind = t.kind === 'shares' ? 'Shares' : (t.kind === 'put' ? 'Put' : 'Call');
+      var btns = el('td'); var bx = el('div', 'rowbtns');
+      var eb = el('button', 'btn small', 'Edit'); eb.type = 'button'; eb.addEventListener('click', function () { startEdit(t.id); });
+      var db = el('button', 'btn small danger', 'Delete'); db.type = 'button';
+      db.addEventListener('click', function () {
+        if (db.dataset.armed) { tax.trades = tax.trades.filter(function (x) { return x.id !== t.id; }); taxSave(); renderTaxes(); }
+        else { db.dataset.armed = '1'; db.textContent = 'Confirm'; setTimeout(function () { delete db.dataset.armed; db.textContent = 'Delete'; }, 3000); }
+      });
+      bx.append(eb, db); btns.append(bx);
+      tr.append(el('td', '', t.closed ? fmtShort(utc(t.closed)) : '—'), el('td', '', String(t.ticker || '').toUpperCase()), el('td', '', kind),
+        el('td', '', String(t.qty)), el('td', '', fx(t.buy, 2)), el('td', '', fx(t.sell, 2)), el('td', '', money2(Number(t.fees) || 0)),
+        el('td', r.gain > 0 ? 'up' : r.gain < 0 ? 'neg' : '', signedMoney(r.gain)), term, btns);
+      rows.append(tr);
+    });
+  }
+  function nextDue(list) {
+    var today = new Date().toISOString().slice(0, 10);
+    var d = list.filter(function (x) { return x >= today; })[0];
+    return d ? fmtShort(utc(d)) + (d.slice(0, 4) !== today.slice(0, 4) ? ', ' + d.slice(0, 4) : '') : '(none left for ' + TAX_YEAR + ')';
+  }
+  var TF = {ticker: 'tf-ticker', kind: 'tf-kind', qty: 'tf-qty', buy: 'tf-buy', sell: 'tf-sell', fees: 'tf-fees', opened: 'tf-opened', closed: 'tf-closed', disallowed: 'tf-wash'};
+  function startEdit(id) {
+    var t = tax.trades.filter(function (x) { return x.id === id; })[0]; if (!t) return;
+    editingId = id;
+    Object.keys(TF).forEach(function (k) { $(TF[k]).value = t[k] == null ? '' : t[k]; });
+    $('tf-submit').textContent = 'Save changes'; $('tf-cancel').hidden = false;
+    $('tf-qty-label').textContent = t.kind === 'shares' ? 'Shares' : 'Contracts';
+    $('trade-form').scrollIntoView({block: 'center'});
+  }
+  function resetForm() {
+    editingId = null; $('trade-form').reset(); $('tf-submit').textContent = 'Add trade'; $('tf-cancel').hidden = true; $('tf-error').hidden = true;
+    $('tf-qty-label').textContent = 'Contracts';
+    document.querySelectorAll('#trade-form [aria-invalid]').forEach(function (n) { n.removeAttribute('aria-invalid'); });
+  }
+  function setupTaxes() {
+    taxLoad(); fillProfile();
+    Object.keys(PROFILE_FIELDS).forEach(function (k) {
+      $(PROFILE_FIELDS[k]).addEventListener('input', function (ev) {
+        var v = ev.target.value; tax.profile[k] = k === 'status' ? v : (v === '' ? null : Number(v)); taxSave(); renderTaxes();
+      });
+    });
+    $('tf-kind').addEventListener('change', function (ev) { $('tf-qty-label').textContent = ev.target.value === 'shares' ? 'Shares' : 'Contracts'; });
+    $('tf-cancel').addEventListener('click', resetForm);
+    $('trade-form').addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var t = {}, bad = [];
+      Object.keys(TF).forEach(function (k) { t[k] = $(TF[k]).value.trim(); $(TF[k]).removeAttribute('aria-invalid'); });
+      ['ticker', 'qty', 'buy', 'sell', 'opened', 'closed'].forEach(function (k) { if (t[k] === '') bad.push(k); });
+      ['qty', 'buy', 'sell', 'fees', 'disallowed'].forEach(function (k) { if (t[k] !== '' && !(Number(t[k]) >= 0)) bad.push(k); });
+      if (!bad.length && t.closed < t.opened) bad.push('closed');
+      bad.forEach(function (k) { $(TF[k]).setAttribute('aria-invalid', 'true'); });
+      if (bad.length) {
+        $('tf-error').hidden = false;
+        $('tf-error').textContent = bad.indexOf('closed') >= 0 && t.closed && t.opened && t.closed < t.opened ? 'The closed date is before the opened date.' : 'Fill in the highlighted fields with numbers of 0 or more.';
+        return;
+      }
+      t.ticker = t.ticker.toUpperCase();
+      ['qty', 'buy', 'sell', 'fees', 'disallowed'].forEach(function (k) { t[k] = t[k] === '' ? 0 : Number(t[k]); });
+      if (editingId) { t.id = editingId; tax.trades = tax.trades.map(function (x) { return x.id === editingId ? t : x; }); }
+      else { t.id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6); tax.trades.push(t); }
+      taxSave(); resetForm(); renderTaxes();
+      $('tx-status').textContent = 'Saved.';
+    });
+    $('tx-export').addEventListener('click', function () {
+      var blob = new Blob([JSON.stringify(tax, null, 2)], {type: 'application/json'});
+      var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'optionsdash-taxes-' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.append(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+      $('tx-status').textContent = 'Backup downloaded.';
+    });
+    $('tx-import').addEventListener('change', function (ev) {
+      var file = ev.target.files && ev.target.files[0]; if (!file) return;
+      file.text().then(function (txt) {
+        var s = JSON.parse(txt);
+        if (!s || !Array.isArray(s.trades)) throw new Error('not a backup file');
+        tax = {profile: s.profile || {status: 'single'}, trades: s.trades};
+        taxSave(); fillProfile(); renderTaxes();
+        $('tx-status').textContent = 'Imported ' + s.trades.length + ' trades.';
+      }).catch(function (e) { $('tx-status').textContent = 'Could not import: ' + e.message; })
+        .then(function () { ev.target.value = ''; });
+    });
+    var clr = $('tx-clear');
+    clr.addEventListener('click', function () {
+      if (clr.dataset.armed) {
+        tax = {profile: {status: 'single'}, trades: []}; taxSave(); fillProfile(); resetForm(); renderTaxes();
+        delete clr.dataset.armed; clr.textContent = 'Delete all'; $('tx-status').textContent = 'All tax data deleted from this browser.';
+      } else {
+        clr.dataset.armed = '1'; clr.textContent = 'Click again to delete everything';
+        setTimeout(function () { delete clr.dataset.armed; clr.textContent = 'Delete all'; }, 4000);
+      }
+    });
+    renderTaxes();
+  }
+
   function showTab(name, fromHash) {
-    if (name !== 'options' && name !== 'track') name = 'scanner';
+    if (['options', 'track', 'taxes'].indexOf(name) < 0) name = 'scanner';
     document.querySelectorAll('.tab').forEach(function (b) { b.setAttribute('aria-selected', b.getAttribute('data-tab') === name ? 'true' : 'false'); });
     $('tab-scanner').hidden = name !== 'scanner';
     $('tab-options').hidden = name !== 'options';
     $('tab-track').hidden = name !== 'track';
+    $('tab-taxes').hidden = name !== 'taxes';
     if (name === 'scanner') renderChart();
     if (!fromHash) { try { history.replaceState(null, '', name === 'scanner' ? location.pathname + location.search : '#' + name); } catch (e) {} }
   }
@@ -686,6 +948,7 @@ table.otab td:first-child { font-weight: 400; }
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { load(); loadOptions(); loadTrack(); } });
   setInterval(function () { if (!document.hidden) { load(); loadOptions(); loadTrack(); } }, REFRESH_MS);
   showTab(location.hash.slice(1), true);
+  setupTaxes();
   load();
   loadOptions();
   loadTrack();

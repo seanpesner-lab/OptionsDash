@@ -45,6 +45,12 @@ The morning run also appends that day's top 10, with the best-fit call and its q
 
 Picks made since the last close are listed but left out of the averages until they've had a trading day to move.
 
+## Taxes tab
+
+A year-to-date tax estimate for your closed trades (`site/tax.js`), using 2026 federal brackets, standard deductions and capital gains thresholds from IRS Rev. Proc. 2025-32, plus the 3.8% NIIT and a flat state rate. It nets short- and long-term results, applies the $3,000 loss limit and carryover, and flags possible wash sales.
+
+Everything you enter stays in your browser's local storage on that device. Nothing is sent to GitHub or anywhere else. Use **Export backup** and **Import backup** to save or move it. It gives estimates, not tax advice.
+
 ## Reliable timing with cron-job.org
 
 GitHub's own schedule is best effort and can run hours late or skip runs. An outside timer that starts the workflow through GitHub's API runs on time. The workflow sends the email and records picks only once a day, so it's fine if both GitHub and the timer start it.
