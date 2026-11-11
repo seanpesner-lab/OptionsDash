@@ -8,6 +8,8 @@ in the last 7 days RSI(14) hit 33 or lower and the close was 5% or more below th
   TRIGGERED  (current)  MACD crossed above its signal today or yesterday.
   PRE-CROSS  (new)      Histogram still below zero, rising 2 days in a row, and at its current
                         pace it reaches zero within 2 days: hist + 2 * (hist - hist_yesterday) >= 0.
+  PRE+UP                PRE-CROSS, and the stock closed up on the day.
+  PRE+HIGH              PRE-CROSS, and the stock closed above the previous day's high.
   WATCH      (context)  Histogram below zero and rising (the scanner's WATCH status).
 
 Each signal is counted on its first day, and a ticker can't fire the same variant again for
@@ -35,6 +37,7 @@ import pandas as pd
 import breakout_scanner as bs
 
 HORIZONS = (5, 10, 20)
+VARIANTS = ["TRIGGERED", "PRE-CROSS", "PRE+UP", "PRE+HIGH", "WATCH"]
 COOLDOWN = 10
 CALL_DTE, CALL_HOLD = 35, 10
 
@@ -65,7 +68,10 @@ def signals_for(df):
     trig = oversold & (cross | cross.shift(1, fill_value=False)) & liquid
     pre = oversold & (hist < 0) & rising2 & (hist + 2 * (hist - hist.shift(1)) >= 0) & liquid
     watch = oversold & (hist < 0) & rising & liquid
-    return {"TRIGGERED": trig, "PRE-CROSS": pre, "WATCH": watch}, cross, f
+    up_day = c > c.shift(1)
+    above_prior_high = c > df["High"].shift(1)
+    return {"TRIGGERED": trig, "PRE-CROSS": pre, "PRE+UP": pre & up_day,
+            "PRE+HIGH": pre & above_prior_high, "WATCH": watch}, cross, f
 
 
 def first_days(mask, cooldown=COOLDOWN):
@@ -145,7 +151,7 @@ def main():
         return f"{x * 100:+.2f}%"
 
     out = []
-    for name in ["TRIGGERED", "PRE-CROSS", "WATCH"]:
+    for name in VARIANTS:
         s = sig[sig.variant == name]
         if s.empty:
             continue
@@ -162,6 +168,9 @@ def main():
         row["call10_win"] = f"{(s.call10 > 0).mean() * 100:.0f}%"
         row["crossed_within_5d"] = f"{s.crossed_5d.mean() * 100:.0f}%"
         row["avg_days_to_cross"] = round(s.days_to_cross.mean(), 1)
+        fs = s[~s.crossed_5d]
+        row["false_starts"] = f"{len(fs) / len(s) * 100:.0f}%" if name != "TRIGGERED" else "-"
+        row["false_start_call10_med"] = pct(fs.call10.median()) if name != "TRIGGERED" and len(fs) else "-"
         out.append(row)
     summary = pd.DataFrame(out).set_index("variant").T
     pd.set_option("display.width", 200, "display.max_rows", 100)
@@ -173,7 +182,19 @@ def main():
     print("\n10-day average return by year (count):")
     for y, rr in by_year.iterrows():
         print(y, "  ".join(f"{v}: {rr[('mean', v)] * 100:+.2f}% ({int(rr[('count', v)])})"
-                          for v in ["TRIGGERED", "PRE-CROSS", "WATCH"] if ("mean", v) in rr and not pd.isna(rr[("mean", v)])))
+                          for v in VARIANTS if ("mean", v) in rr and not pd.isna(rr[("mean", v)])))
+
+    # Significance of each variant against the current rule
+    base = sig[sig.variant == "TRIGGERED"]
+    print("\nDifference vs TRIGGERED (in standard errors; about 2 or more is meaningful):")
+    for v in VARIANTS[1:]:
+        a = sig[sig.variant == v]
+        parts = []
+        for col in ("ret10", "ret20", "call10"):
+            x, y2 = a[col].dropna(), base[col].dropna()
+            se = math.sqrt(x.var() / len(x) + y2.var() / len(y2))
+            parts.append(f"{col} {(x.mean() - y2.mean()) * 100:+.2f}% ({(x.mean() - y2.mean()) / se:+.1f} SE)")
+        print(f"  {v:<10} " + "   ".join(parts))
 
 
 if __name__ == "__main__":
