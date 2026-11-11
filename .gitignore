@@ -6,3 +6,4 @@ site/data/
 scan_*.csv
 latest_scan.csv
 scan_output.txt
+backtest_signals.csv
