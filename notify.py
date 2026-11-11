@@ -77,13 +77,28 @@ def top10(rows, n=10):
 def contract_line(c):
     exp = dt.date.fromisoformat(c["expiration"])
     s = (f"{exp:%b} {exp.day} {c['strike']:g}C: mid {c['mid']:.2f} (${c['cost']:,}), spread {c['spread_pct']:.1f}%, "
-         f"delta {c['delta']:.2f}, needs {c['move_pct']:+.1f}% by expiration")
+         f"delta {c['delta']:.2f}, needs {(c['move_pct'] or 0.0):+.1f}% by expiration")
     return s + (", expires after earnings" if c.get("after_earnings") else "")
+
+
+def exit_line(ticker, c, stop):
+    """Exit plan: take profit at +50%, sell by the 10th trading day, stop if the stock closes 8% lower."""
+    parts = []
+    if c and c.get("take_profit"):
+        parts.append(f"take profit at {c['take_profit']:.2f} (+50%)")
+    if c and c.get("sell_by"):
+        sb = dt.date.fromisoformat(c["sell_by"])
+        parts.append(f"otherwise sell {sb:%a %b} {sb.day}")
+    if stop:
+        parts.append(f"stop if {ticker} closes below {stop:.2f} (-8%)")
+    return "; ".join(parts)
 
 
 def build(data, url, options=None):
     meta, picks = data.get("meta", {}), top10(data.get("rows", []))
-    best = {s["ticker"]: (s.get("contracts") or [None])[0] for s in (options or {}).get("stocks", [])}
+    stocks = (options or {}).get("stocks", [])
+    best = {s["ticker"]: (s.get("contracts") or [None])[0] for s in stocks}
+    stops = {s["ticker"]: s.get("stop_price") for s in stocks}
     bar = meta.get("bar_date") or "?"
     prov = meta.get("provisional")
     d = dt.date.fromisoformat(bar) if bar != "?" else None
@@ -100,11 +115,14 @@ def build(data, url, options=None):
         lines.append(f"    {reason(r)}{warn}")
         if best.get(r["ticker"]):
             lines.append(f"    Best-fit call: {contract_line(best[r['ticker']])}")
+            lines.append(f"    Exit plan: {exit_line(r['ticker'], best[r['ticker']], stops.get(r['ticker']))}")
     if not picks:
         lines.append("No stock fits a call setup today.")
     lines += ["", f"Dashboard: {url}", "",
               "Ranked by your scanner's rules: Ready (reversal triggered or turned), then Building (momentum, squeeze), "
-              "then Setting up (oversold watch). Rule matches, not advice. Check the option chain, spread and earnings date before trading."]
+              "then Setting up (oversold watch). Exit plan per trade: take profit when the call is up 50%, "
+              "otherwise sell after 10 trading days, and sell if the stock closes 8% below its price at entry. "
+              "Rule matches, not advice. Check the option chain, spread and earnings date before trading."]
     text = "\n".join(lines)
 
     # HTML
@@ -117,7 +135,9 @@ def build(data, url, options=None):
         c = best.get(r["ticker"])
         if c:
             warn += (f'<div style="margin-top:4px;font:12px monospace;color:#14201b;background:#f0f4f2;border-radius:4px;padding:4px 6px">'
-                     f'Best-fit call: {e(contract_line(c))}</div>')
+                     f'Best-fit call: {e(contract_line(c))}</div>'
+                     f'<div style="margin-top:3px;font-size:12px;color:#3d4a44">Exit plan: '
+                     f'{e(exit_line(r["ticker"], c, stops.get(r["ticker"])))}</div>')
         t = tier(r)
         badge ={1: "#1a7f37", 2: "#3756c8", 3: "#a96a00"}[t]
         rows_html.append(f"""
@@ -145,7 +165,7 @@ def build(data, url, options=None):
   {banner}
   <table role="presentation" style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #e3e8e5;border-radius:8px">{body}</table>
   <p style="margin:18px 0"><a href="{e(url)}" style="background:#0f766e;color:#fff;text-decoration:none;padding:9px 16px;border-radius:6px;font-size:14px;display:inline-block">Open the dashboard</a></p>
-  <p style="font-size:12px;color:#5b6a63;line-height:1.5">Ranked by your scanner's rules: <b>Ready</b> (reversal triggered or turned), then <b>Building</b> (momentum with rising MACD histogram, squeeze), then <b>Setting up</b> (oversold, selling fading). Higher score first within each group. These are rule matches, not advice. Check the option chain, bid-ask spread and earnings date before trading.</p>
+  <p style="font-size:12px;color:#5b6a63;line-height:1.5">Ranked by your scanner's rules: <b>Ready</b> (reversal triggered or turned), then <b>Building</b> (momentum with rising MACD histogram, squeeze), then <b>Setting up</b> (oversold, selling fading). Higher score first within each group. Exit plan per trade: take profit when the call is up 50%, otherwise sell after 10 trading days, and sell if the stock closes 8% below its price at entry. These are rule matches, not advice. Check the option chain, bid-ask spread and earnings date before trading.</p>
 </div></body></html>"""
     return subject, text, html_doc
 

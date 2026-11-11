@@ -37,7 +37,30 @@ RULES = {
     "delta_min": 0.40, "delta_max": 0.60,
     "max_spread_pct": 10.0,
     "per_stock": 3,
+    # Exit plan (tested in backtest_filters.py and a stop-loss study):
+    #   take profit when the call is up 50%, otherwise sell after 10 trading days,
+    #   and sell if the stock closes 8% or more below its price at entry.
+    # The 8% stop cost about 0.4% per trade on average in the test but caps the worst losers;
+    # tighter stops cost more.
+    "take_profit_pct": 50,
+    "hold_days": 10,
+    "stop_pct": 8,
 }
+
+# NYSE full-day closures, for the sell-by date.
+NYSE_HOLIDAYS = [
+    "2026-01-01", "2026-01-19", "2026-02-16", "2026-04-03", "2026-05-25", "2026-06-19", "2026-07-03",
+    "2026-09-07", "2026-11-26", "2026-12-25",
+    "2027-01-01", "2027-01-18", "2027-02-15", "2027-03-26", "2027-05-31", "2027-06-18", "2027-07-05",
+    "2027-09-06", "2027-11-25", "2027-12-24",
+]
+
+
+def sell_by(entry_day, hold_days=RULES["hold_days"]):
+    """Close of the hold_days-th trading day, counting the entry day as day 1."""
+    import numpy as np
+    d = np.busday_offset(np.datetime64(entry_day), 0, roll="forward", holidays=NYSE_HOLIDAYS)
+    return str(np.busday_offset(d, hold_days - 1, holidays=NYSE_HOLIDAYS))
 
 
 def parse_occ(sym):
@@ -103,6 +126,8 @@ def pick_contracts(chain, spot, today, next_earnings):
             "theta": None if theta is None else round(theta, 3),
             "breakeven": round(strike + mid, 2), "move_pct": round(((strike + mid) / spot - 1) * 100, 1),
             "volume": vol, "after_earnings": after_earnings,
+            "take_profit": round(mid * (1 + RULES["take_profit_pct"] / 100), 2),
+            "sell_by": sell_by(today.isoformat()),
         })
     rows.sort(key=lambda c: (c["volume"] == 0, c["spread_pct"], abs(c["delta"] - 0.5)))
     return rows[:RULES["per_stock"]]
@@ -132,6 +157,7 @@ def main():
     for r in picks:
         stock = {"ticker": r["ticker"], "tier": TIER_LABEL[tier(r)], "setup": r["setup"], "status": r["status"],
                  "reason": reason(r), "close": r["close"], "score": r["score"],
+                 "stop_price": round(r["close"] * (1 - RULES["stop_pct"] / 100), 2),
                  "next_earnings": r.get("next_earnings") or "", "contracts": [], "checked": 0, "error": None}
         if sess:
             try:
