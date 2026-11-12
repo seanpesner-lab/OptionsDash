@@ -171,6 +171,9 @@ table.otab td:first-child { font-weight: 400; }
 .taxtab tr.total td { font-weight: 600; color: var(--fg); }
 .rowbtns { display: flex; gap: 6px; justify-content: flex-end; }
 .alert-list { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.closeform { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; padding: 8px 0; white-space: normal; }
+.closeform .fld { min-width: 120px; }
+.src { font-family: var(--sans); font-size: 0.68rem; color: var(--muted); margin-left: 4px; }
 @media (prefers-reduced-motion: no-preference) { .card, .tile { transition: border-color .2s; } .card:hover { border-color: var(--muted); } }
 </style>
 </head>
@@ -191,6 +194,7 @@ table.otab td:first-child { font-weight: 400; }
     <button class="tab" type="button" role="tab" id="tabbtn-scanner" data-tab="scanner" aria-selected="true" aria-controls="tab-scanner">Scanner</button>
     <button class="tab" type="button" role="tab" id="tabbtn-options" data-tab="options" aria-selected="false" aria-controls="tab-options">Options</button>
     <button class="tab" type="button" role="tab" id="tabbtn-track" data-tab="track" aria-selected="false" aria-controls="tab-track">Track record</button>
+    <button class="tab" type="button" role="tab" id="tabbtn-positions" data-tab="positions" aria-selected="false" aria-controls="tab-positions">My positions</button>
     <button class="tab" type="button" role="tab" id="tabbtn-taxes" data-tab="taxes" aria-selected="false" aria-controls="tab-taxes">Taxes</button>
   </nav>
 
@@ -337,6 +341,66 @@ table.otab td:first-child { font-weight: 400; }
     </section>
   </div>
 
+  <div class="tabpanel" id="tab-positions" role="tabpanel" aria-labelledby="tabbtn-positions" hidden>
+    <p class="banner">Private to this browser. Your positions are saved only on this device and never sent anywhere. Use Export to back them up or move them to another device.</p>
+
+    <section class="sec" id="pos-summary">
+      <div class="sec-head">
+        <h2>Open positions</h2>
+        <p>Checked against your exit plan on each completed daily close: once RSI reaches 70, sell when momentum fades; sell if the stock closes 8% below your entry; sell by the 20th trading day.</p>
+      </div>
+      <div id="pos-alerts"></div>
+      <div class="tiles" id="pos-tiles"></div>
+      <div class="tablewrap">
+        <table class="otab">
+          <thead><tr><th>Contract</th><th>Opened</th><th>Qty</th><th>Paid</th><th>Now</th><th>P&amp;L</th><th>Stock</th><th>Exit plan</th><th>Stop</th><th>Sell by</th><th></th></tr></thead>
+          <tbody id="pos-rows"></tbody>
+        </table>
+      </div>
+      <p class="foot">"Now" is a delayed quote when the contract is one the scanner prices (marked quote), otherwise an estimate from the stock price, days left and the volatility implied by what you paid (marked est.). Check your broker for the real price before you sell.</p>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head">
+        <h2 id="pos-form-title">Add a position</h2>
+        <p>Or use <b>Track</b> next to any contract on the <a href="#options">Options</a> tab to fill this in. Price is per share as quoted.</p>
+      </div>
+      <form class="form-grid tradeform" id="pos-form" novalidate>
+        <label class="fld"><span>Ticker</span><input id="pf-ticker" type="text" maxlength="8" autocomplete="off" placeholder="NFLX" required></label>
+        <label class="fld"><span>Type</span><select class="dash-sel" id="pf-kind"><option value="call">Call</option><option value="put">Put</option></select></label>
+        <label class="fld"><span>Strike</span><input id="pf-strike" type="number" min="0" step="0.5" inputmode="decimal" required></label>
+        <label class="fld"><span>Expiration</span><input id="pf-exp" type="date" required></label>
+        <label class="fld"><span>Contracts</span><input id="pf-qty" type="number" min="1" step="1" inputmode="numeric" value="1" required></label>
+        <label class="fld"><span>Price paid</span><input id="pf-paid" type="number" min="0" step="0.01" inputmode="decimal" required></label>
+        <label class="fld"><span>Fees, total ($)</span><input id="pf-fees" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0"></label>
+        <label class="fld"><span>Opened</span><input id="pf-opened" type="date" required></label>
+        <label class="fld"><span>Stock price at entry</span><input id="pf-entry" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Blank = that day's close"><small>Sets your 8% stop</small></label>
+        <div class="fld actions">
+          <button class="btn primary" type="submit" id="pf-submit">Add position</button>
+          <button class="btn" type="button" id="pf-cancel" hidden>Cancel</button>
+        </div>
+        <p class="cap warn" id="pf-error" hidden></p>
+      </form>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head"><h2>Closed positions</h2><p>Closing a position can also add it to the Taxes tab.</p></div>
+      <div class="tablewrap">
+        <table class="otab">
+          <thead><tr><th>Contract</th><th>Opened</th><th>Closed</th><th>Qty</th><th>Paid</th><th>Sold</th><th>P&amp;L</th><th></th></tr></thead>
+          <tbody id="pos-closed"></tbody>
+        </table>
+      </div>
+      <div class="tools">
+        <button class="btn" type="button" id="px-export">Export backup</button>
+        <label class="btn" for="px-import">Import backup</label>
+        <input id="px-import" type="file" accept="application/json,.json" hidden>
+        <button class="btn danger" type="button" id="px-clear">Delete all</button>
+        <span class="cap" id="px-status" role="status"></span>
+      </div>
+    </section>
+  </div>
+
   <div class="tabpanel" id="tab-taxes" role="tabpanel" aria-labelledby="tabbtn-taxes" hidden>
     <p class="banner">Private to this browser. Your income and trades are saved only on this device and are never sent anywhere. Use Export to back them up or move them to another device.</p>
 
@@ -425,6 +489,7 @@ table.otab td:first-child { font-weight: 400; }
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="tax.js"></script>
+<script src="positions.js"></script>
 <script>
 (function () {
   var ORDER = {REVERSAL: 0, MOMENTUM: 1, SQUEEZE: 2, AVOID: 3};
@@ -626,6 +691,7 @@ table.otab td:first-child { font-weight: 400; }
   // ---------------------------------------------------------------- options tab
   var optStamp = null;
   function renderOptions(o) {
+    optData = o;
     var list = $('opt-list'); list.replaceChildren();
     var m = o.meta || {};
     $('opt-error').hidden = !m.error;
@@ -652,7 +718,7 @@ table.otab td:first-child { font-weight: 400; }
       } else {
         var wrap = el('div', 'tablewrap'), t = el('table', 'otab');
         var hr = el('tr');
-        ['Expiration', 'Strike', 'Mid', 'Cost', 'Sell by (latest)', 'Spread', 'Delta', 'IV', 'Theta/day', 'Move to break even', 'Vol today'].forEach(function (h) { hr.append(el('th', '', h)); });
+        ['Expiration', 'Strike', 'Mid', 'Cost', 'Sell by (latest)', 'Spread', 'Delta', 'IV', 'Theta/day', 'Move to break even', 'Vol today', ''].forEach(function (h) { hr.append(el('th', '', h)); });
         var thead = el('thead'); thead.append(hr);
         var tb = el('tbody');
         cs.forEach(function (c) {
@@ -667,6 +733,10 @@ table.otab td:first-child { font-weight: 400; }
             el('td', '', c.theta == null ? '—' : fx(c.theta, 2)),
             el('td', c.move_pct > 0 ? '' : 'up', (c.move_pct > 0 ? '+' : '') + fx(c.move_pct, 1) + '%'),
             el('td', c.volume ? '' : 'muted', d3.format(',')(c.volume)));
+          var tk = el('td'), tb2 = el('button', 'btn small primary', 'Track'); tb2.type = 'button';
+          tb2.title = 'Add this contract to My positions';
+          tb2.addEventListener('click', function () { trackContract(s, c); });
+          tk.append(tb2); tr.append(tk);
           tb.append(tr);
         });
         t.append(thead, tb); wrap.append(t); box.append(wrap);
@@ -680,7 +750,7 @@ table.otab td:first-child { font-weight: 400; }
       .then(function (o) {
         var st = o.meta && o.meta.generated_at;
         if (st && st === optStamp) { if (st) $('opt-meta').textContent = 'Option prices updated ' + ago(st); return; }
-        optStamp = st; renderOptions(o);
+        optStamp = st; renderOptions(o); renderPositions();
       })
       .catch(function () {
         if (!optStamp) { var l = $('opt-list'); l.replaceChildren(el('p', 'empty', 'Option data has not been generated yet. It appears after the next scheduled run.')); }
@@ -694,6 +764,7 @@ table.otab td:first-child { font-weight: 400; }
     return td;
   }
   function renderTrack(t) {
+    trkData = t;
     var m = t.meta || {}, s = (t.summary || {}).all || {}, picks = t.picks || [];
     $('trk-error').hidden = !m.error; $('trk-error').textContent = m.error || '';
     var tiles = $('trk-tiles'); tiles.replaceChildren();
@@ -777,7 +848,7 @@ table.otab td:first-child { font-weight: 400; }
       .then(function (t) {
         var st = t.meta && t.meta.generated_at;
         if (st && st === trkStamp) return;
-        trkStamp = st; renderTrack(t);
+        trkStamp = st; renderTrack(t); renderPositions();
       })
       .catch(function () { if (!trkStamp) renderTrack({meta: {}, summary: {}, picks: []}); });
   }
@@ -937,13 +1008,249 @@ table.otab td:first-child { font-weight: 400; }
     renderTaxes();
   }
 
+  // ---------------------------------------------------------------- my positions tab (browser-only storage)
+  var POS_KEY = 'optionsdash.positions.v1';
+  var pos = {open: [], closed: []}, posEditing = null, optData = null, trkData = null, indData = null, indStamp = null;
+  function posLoad() {
+    try { var s = JSON.parse(localStorage.getItem(POS_KEY) || 'null'); if (s && s.open) pos = s; } catch (e) {}
+    pos.closed = pos.closed || [];
+  }
+  function posSave() {
+    try { localStorage.setItem(POS_KEY, JSON.stringify(pos)); return true; }
+    catch (e) { $('px-status').textContent = 'Could not save in this browser (private mode?). Export a backup to keep your positions.'; return false; }
+  }
+  function todayET() { return new Date().toLocaleDateString('en-CA', {timeZone: 'America/New_York'}); }
+  function seriesFor(t) { return indData && indData.tickers ? indData.tickers[String(t).toUpperCase()] : null; }
+  function closeOn(series, iso) {
+    if (!series) return null; var v = null;
+    for (var i = 0; i < series.d.length; i++) if (series.d[i] <= iso) v = series.c[i];
+    return v;
+  }
+  function occSymbol(p) {
+    var e = String(p.expiration).replace(/-/g, '').slice(2);
+    return String(p.ticker).toUpperCase() + e + (p.kind === 'put' ? 'P' : 'C') + ('00000000' + Math.round(Number(p.strike) * 1000)).slice(-8);
+  }
+  function quoteFor(sym) {
+    var hit = null;
+    ((optData && optData.stocks) || []).forEach(function (s) { (s.contracts || []).forEach(function (c) { if (c.symbol === sym) hit = c.mid; }); });
+    if (hit == null) ((trkData && trkData.picks) || []).forEach(function (p) { if (p.contract === sym && p.option_state === 'open' && p.option_value != null) hit = p.option_value; });
+    return hit;
+  }
+  function priceNow(p) {
+    var q = quoteFor(p.symbol || occSymbol(p));
+    if (q != null) return {price: q, src: 'quote'};
+    var s = seriesFor(p.ticker); if (!s || !p.iv) return {price: null, src: ''};
+    var S = s.c[s.c.length - 1], yrs = Positions.yearsBetween(todayET(), p.expiration);
+    return {price: Positions.optionValue(p.kind, S, Number(p.strike), yrs, p.iv), src: 'est.'};
+  }
+  function posStatus(p) {
+    var s = seriesFor(p.ticker), m = indData && indData.meta;
+    var drop = m && m.provisional ? m.bar_date : null;
+    return Positions.exitStatus(s, p.opened, Number(p.entry), drop);
+  }
+  var POS_REASON = {momentum: 'momentum faded after RSI 70', stop: 'stop hit (closed 8% below entry)', time: '20-day limit reached'};
+  function contractLabel(p) { return p.ticker + ' ' + fmtShort(utc(p.expiration)) + ' ' + d3.format('~g')(p.strike) + (p.kind === 'put' ? 'P' : 'C'); }
+
+  function renderPositions() {
+    if (!window.Positions) return;
+    var rows = $('pos-rows'); rows.replaceChildren();
+    var alerts = [], cost = 0, value = 0, valued = 0;
+    if (!pos.open.length) {
+      var tr0 = el('tr'), td0 = el('td', 'empty', 'No open positions. Add one below, or click Track on a contract in the Options tab.');
+      td0.colSpan = 11; td0.style.whiteSpace = 'normal'; tr0.append(td0); rows.append(tr0);
+    }
+    pos.open.forEach(function (p) {
+      var now = priceNow(p), pl = Positions.pnl(p, now.price), st = posStatus(p);
+      cost += pl.cost; if (pl.value != null) { value += pl.value; valued += 1; }
+      if (st.state === 'sell' || st.state === 'closed') alerts.push({p: p, st: st, kind: 'sell'});
+      else if (st.rsi70) alerts.push({p: p, st: st, kind: 'watch'});
+      var tr = el('tr');
+      var nowTd = el('td', '', now.price == null ? '—' : fx(now.price, 2)); if (now.src) nowTd.append(el('span', 'src', now.src));
+      var plTd = el('td', pl.dollars == null ? 'muted' : pl.dollars >= 0 ? 'up' : 'neg',
+        pl.dollars == null ? '—' : signedMoney(pl.dollars) + ' (' + (pl.pct > 0 ? '+' : '') + fx(pl.pct, 0) + '%)');
+      var stockTd = el('td', '', st.lastClose == null ? '—' : fx(st.lastClose, 2));
+      var exitTd;
+      if (st.state === 'sell') exitTd = el('td', 'neg', 'Sell now: ' + POS_REASON[st.reason]);
+      else if (st.state === 'closed') exitTd = el('td', 'neg', 'Sell: ' + POS_REASON[st.reason] + (st.date ? ' (' + fmtShort(utc(st.date)) + ')' : ''));
+      else if (!st.known) exitTd = el('td', 'muted', 'No data for ' + p.ticker);
+      else if (!st.day) exitTd = el('td', 'muted', 'Starts after today\'s close');
+      else exitTd = el('td', st.rsi70 ? 'warn' : '', (st.rsi70 ? 'RSI hit 70, watch for fade' : 'Holding') + ' · day ' + st.day + '/20 · RSI ' + fx(st.rsi, 0));
+      var acts = el('td'), bx = el('div', 'rowbtns');
+      var cb = el('button', 'btn small primary', 'Close'); cb.type = 'button'; cb.addEventListener('click', function () { openCloseForm(tr, p, now.price); });
+      var eb = el('button', 'btn small', 'Edit'); eb.type = 'button'; eb.addEventListener('click', function () { posStartEdit(p.id); });
+      var db = el('button', 'btn small danger', 'Delete'); db.type = 'button';
+      db.addEventListener('click', function () {
+        if (db.dataset.armed) { pos.open = pos.open.filter(function (x) { return x.id !== p.id; }); posSave(); renderPositions(); }
+        else { db.dataset.armed = '1'; db.textContent = 'Confirm'; setTimeout(function () { delete db.dataset.armed; db.textContent = 'Delete'; }, 3000); }
+      });
+      bx.append(cb, eb, db); acts.append(bx);
+      tr.append(el('td', '', contractLabel(p)), el('td', '', fmtShort(utc(p.opened))), el('td', '', String(p.qty)), el('td', '', fx(p.paid, 2)),
+        nowTd, plTd, stockTd, exitTd, el('td', '', fx(st.stopPrice, 2)), el('td', '', fmtShort(utc(Positions.sellBy(p.opened)))), acts);
+      rows.append(tr);
+    });
+
+    var al = $('pos-alerts'); al.replaceChildren();
+    if (alerts.length) {
+      var box = el('div', 'banner'); box.append(el('b', '', 'Exit alerts')); var ul = el('ul', 'alert-list');
+      alerts.forEach(function (a) {
+        var li = el('li');
+        if (a.kind === 'sell') li.append(el('b', 'neg', 'Sell ' + contractLabel(a.p)), ': ' + POS_REASON[a.st.reason] + '.');
+        else li.append(el('b', 'warn', 'Watch ' + contractLabel(a.p)), ': RSI reached 70 (now ' + fx(a.st.rsi, 1) + '). Sell on the first close where momentum fades.');
+        ul.append(li);
+      });
+      box.append(ul); al.append(box);
+    }
+
+    var tiles = $('pos-tiles'); tiles.replaceChildren();
+    function tile(label, v, note, cls) { var d = el('div', 'tile'); d.append(el('span', 'tile-label', label), el('span', 'tile-n' + (cls ? ' ' + cls : ''), v), el('span', 'tile-note', note)); tiles.append(d); }
+    var unreal = value - cost;
+    tile('Open', String(pos.open.length), pos.open.length ? alerts.filter(function (a) { return a.kind === 'sell'; }).length + ' to sell' : 'none');
+    tile('Cost', money(cost), 'premium plus fees');
+    tile('Value now', valued ? money(value) : '—', valued < pos.open.length ? (pos.open.length - valued) + ' without a price' : 'quotes and estimates');
+    tile('Unrealized', valued ? signedMoney(unreal) : '—', cost > 0 && valued ? (unreal >= 0 ? '+' : '') + fx(unreal / cost * 100, 1) + '%' : '', unreal > 0 ? 'up' : unreal < 0 ? 'neg' : '');
+
+    var cl = $('pos-closed'); cl.replaceChildren();
+    if (!pos.closed.length) { var t1 = el('tr'), d1 = el('td', 'empty', 'Nothing closed yet.'); d1.colSpan = 8; t1.append(d1); cl.append(t1); }
+    pos.closed.slice().reverse().forEach(function (p) {
+      var pl = Positions.pnl(p, Number(p.sold)), tr = el('tr');
+      var td = el('td'); var bx = el('div', 'rowbtns');
+      var rb = el('button', 'btn small', 'Reopen'); rb.type = 'button';
+      rb.addEventListener('click', function () { pos.closed = pos.closed.filter(function (x) { return x.id !== p.id; }); delete p.sold; delete p.closedOn; pos.open.push(p); posSave(); renderPositions(); });
+      bx.append(rb); td.append(bx);
+      tr.append(el('td', '', contractLabel(p)), el('td', '', fmtShort(utc(p.opened))), el('td', '', fmtShort(utc(p.closedOn))), el('td', '', String(p.qty)),
+        el('td', '', fx(p.paid, 2)), el('td', '', fx(p.sold, 2)),
+        el('td', pl.dollars >= 0 ? 'up' : 'neg', signedMoney(pl.dollars) + ' (' + (pl.pct > 0 ? '+' : '') + fx(pl.pct, 0) + '%)'), td);
+      cl.append(tr);
+    });
+  }
+
+  function openCloseForm(tr, p, price) {
+    var next = tr.nextSibling; if (next && next.classList && next.classList.contains('closerow')) { next.remove(); return; }
+    var row = el('tr', 'closerow'), td = el('td'); td.colSpan = 11;
+    var f = el('div', 'closeform');
+    function fld(label, input) { var l = el('label', 'fld'); l.append(el('span', '', label), input); return l; }
+    var sold = document.createElement('input'); sold.type = 'number'; sold.step = '0.01'; sold.min = '0'; sold.value = price != null ? price.toFixed(2) : '';
+    var when = document.createElement('input'); when.type = 'date'; when.value = todayET();
+    var fees = document.createElement('input'); fees.type = 'number'; fees.step = '0.01'; fees.min = '0'; fees.placeholder = '0';
+    var taxBox = document.createElement('input'); taxBox.type = 'checkbox'; taxBox.checked = true;
+    var tl = el('label', 'cap'); tl.append(taxBox, ' Add to Taxes tab');
+    var ok = el('button', 'btn primary', 'Confirm close'); ok.type = 'button';
+    var err = el('span', 'cap warn');
+    ok.addEventListener('click', function () {
+      var s = Number(sold.value);
+      if (sold.value === '' || !(s >= 0) || !when.value || when.value < p.opened) { err.textContent = 'Enter the sell price and a close date on or after the open date.'; return; }
+      var extra = Number(fees.value) || 0;
+      p.sold = s; p.closedOn = when.value; p.fees = (Number(p.fees) || 0) + extra;
+      pos.open = pos.open.filter(function (x) { return x.id !== p.id; }); pos.closed.push(p); posSave();
+      if (taxBox.checked) {
+        tax.trades.push({id: 'pos-' + p.id, ticker: p.ticker, kind: p.kind, qty: p.qty, buy: p.paid, sell: s, fees: p.fees, opened: p.opened, closed: when.value, disallowed: 0});
+        taxSave(); renderTaxes();
+      }
+      $('px-status').textContent = 'Closed ' + contractLabel(p) + (taxBox.checked ? ' and added it to the Taxes tab.' : '.');
+      renderPositions();
+    });
+    f.append(fld('Sell price', sold), fld('Date', when), fld('Closing fees ($)', fees), tl, ok, err);
+    td.append(f); row.append(td); tr.after(row); sold.focus();
+  }
+
+  var PF = {ticker: 'pf-ticker', kind: 'pf-kind', strike: 'pf-strike', expiration: 'pf-exp', qty: 'pf-qty', paid: 'pf-paid', fees: 'pf-fees', opened: 'pf-opened', entry: 'pf-entry'};
+  var pfExtra = {};
+  function posResetForm() {
+    posEditing = null; pfExtra = {}; $('pos-form').reset(); $('pf-qty').value = '1'; $('pf-opened').value = todayET();
+    $('pf-submit').textContent = 'Add position'; $('pf-cancel').hidden = true; $('pf-error').hidden = true; $('pos-form-title').textContent = 'Add a position';
+    document.querySelectorAll('#pos-form [aria-invalid]').forEach(function (n) { n.removeAttribute('aria-invalid'); });
+  }
+  function posFill(v, title) {
+    Object.keys(PF).forEach(function (k) { if (v[k] != null) $(PF[k]).value = v[k]; });
+    $('pos-form-title').textContent = title; $('pf-cancel').hidden = false;
+  }
+  function posStartEdit(id) {
+    var p = pos.open.filter(function (x) { return x.id === id; })[0]; if (!p) return;
+    posEditing = id; pfExtra = {symbol: p.symbol, iv: p.iv};
+    posFill(p, 'Edit ' + contractLabel(p)); $('pf-submit').textContent = 'Save changes';
+    $('pos-form').scrollIntoView({block: 'center'});
+  }
+  // Called from the Options tab's Track button
+  function trackContract(s, c) {
+    posResetForm();
+    var o = Positions.parseOcc(c.symbol) || {};
+    pfExtra = {symbol: c.symbol, iv: c.iv_pct ? c.iv_pct / 100 : null};
+    posFill({ticker: s.ticker, kind: o.kind || 'call', strike: c.strike, expiration: c.expiration, qty: 1, paid: c.mid, opened: todayET(), entry: s.close},
+      'Track ' + s.ticker + ' ' + fmtShort(utc(c.expiration)) + ' ' + d3.format('~g')(c.strike) + 'C');
+    $('pf-submit').textContent = 'Add position';
+    showTab('positions');
+    $('pos-form').scrollIntoView({block: 'center'}); $('pf-paid').focus(); $('pf-paid').select();
+    $('px-status').textContent = 'Check the price you actually paid and the number of contracts, then click Add position.';
+  }
+
+  function setupPositions() {
+    posLoad(); posResetForm();
+    $('pf-cancel').addEventListener('click', posResetForm);
+    $('pos-form').addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var v = {}, bad = [];
+      Object.keys(PF).forEach(function (k) { v[k] = $(PF[k]).value.trim(); $(PF[k]).removeAttribute('aria-invalid'); });
+      ['ticker', 'strike', 'expiration', 'qty', 'paid', 'opened'].forEach(function (k) { if (v[k] === '') bad.push(k); });
+      ['strike', 'qty', 'paid', 'fees', 'entry'].forEach(function (k) { if (v[k] !== '' && !(Number(v[k]) >= 0)) bad.push(k); });
+      if (v.qty !== '' && !(Number(v.qty) >= 1)) bad.push('qty');
+      if (!bad.length && v.expiration < v.opened) bad.push('expiration');
+      v.ticker = v.ticker.toUpperCase();
+      if (!bad.length && v.entry === '') {
+        var c0 = closeOn(seriesFor(v.ticker), v.opened);
+        if (c0 == null) bad.push('entry'); else v.entry = c0;
+      }
+      bad.forEach(function (k) { $(PF[k]).setAttribute('aria-invalid', 'true'); });
+      if (bad.length) {
+        $('pf-error').hidden = false;
+        $('pf-error').textContent = bad.indexOf('entry') >= 0 && $(PF.entry).value === '' ? 'No price data for ' + v.ticker + ' on that date. Enter the stock price at entry.' :
+          bad.indexOf('expiration') >= 0 && v.expiration && v.expiration < v.opened ? 'Expiration is before the open date.' : 'Fill in the highlighted fields.';
+        return;
+      }
+      ['strike', 'qty', 'paid', 'fees', 'entry'].forEach(function (k) { v[k] = v[k] === '' ? 0 : Number(v[k]); });
+      v.symbol = pfExtra.symbol || occSymbol(v);
+      v.iv = pfExtra.iv || Positions.impliedVol(v.kind, v.paid, v.entry, v.strike, Math.max(1 / 365, Positions.yearsBetween(v.opened, v.expiration)));
+      if (posEditing) { v.id = posEditing; pos.open = pos.open.map(function (x) { return x.id === posEditing ? v : x; }); }
+      else { v.id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6); pos.open.push(v); }
+      posSave(); posResetForm(); renderPositions();
+      $('px-status').textContent = 'Saved.';
+    });
+    $('px-export').addEventListener('click', function () {
+      var blob = new Blob([JSON.stringify(pos, null, 2)], {type: 'application/json'});
+      var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'optionsdash-positions-' + todayET() + '.json';
+      document.body.append(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+      $('px-status').textContent = 'Backup downloaded.';
+    });
+    $('px-import').addEventListener('change', function (ev) {
+      var file = ev.target.files && ev.target.files[0]; if (!file) return;
+      file.text().then(function (txt) {
+        var s = JSON.parse(txt); if (!s || !Array.isArray(s.open)) throw new Error('not a positions backup');
+        pos = {open: s.open, closed: s.closed || []}; posSave(); renderPositions();
+        $('px-status').textContent = 'Imported ' + s.open.length + ' open and ' + (s.closed || []).length + ' closed positions.';
+      }).catch(function (e) { $('px-status').textContent = 'Could not import: ' + e.message; }).then(function () { ev.target.value = ''; });
+    });
+    var clr = $('px-clear');
+    clr.addEventListener('click', function () {
+      if (clr.dataset.armed) { pos = {open: [], closed: []}; posSave(); renderPositions(); delete clr.dataset.armed; clr.textContent = 'Delete all'; $('px-status').textContent = 'All positions deleted from this browser.'; }
+      else { clr.dataset.armed = '1'; clr.textContent = 'Click again to delete everything'; setTimeout(function () { delete clr.dataset.armed; clr.textContent = 'Delete all'; }, 4000); }
+    });
+    renderPositions();
+  }
+  function loadIndicators() {
+    return fetch('data/indicators.json?t=' + Date.now(), {cache: 'no-store'})
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (d) { var st = d.meta && d.meta.generated_at; if (st && st === indStamp) return; indStamp = st; indData = d; renderPositions(); })
+      .catch(function () {});
+  }
+
   function showTab(name, fromHash) {
-    if (['options', 'track', 'taxes'].indexOf(name) < 0) name = 'scanner';
+    if (['options', 'track', 'positions', 'taxes'].indexOf(name) < 0) name = 'scanner';
     document.querySelectorAll('.tab').forEach(function (b) { b.setAttribute('aria-selected', b.getAttribute('data-tab') === name ? 'true' : 'false'); });
     $('tab-scanner').hidden = name !== 'scanner';
     $('tab-options').hidden = name !== 'options';
     $('tab-track').hidden = name !== 'track';
     $('tab-taxes').hidden = name !== 'taxes';
+    $('tab-positions').hidden = name !== 'positions';
     if (name === 'scanner') renderChart();
     if (!fromHash) { try { history.replaceState(null, '', name === 'scanner' ? location.pathname + location.search : '#' + name); } catch (e) {} }
   }
@@ -983,13 +1290,15 @@ table.otab td:first-child { font-weight: 400; }
     });
   });
   var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(renderChart, 150); });
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) { load(); loadOptions(); loadTrack(); } });
-  setInterval(function () { if (!document.hidden) { load(); loadOptions(); loadTrack(); } }, REFRESH_MS);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { load(); loadOptions(); loadTrack(); loadIndicators(); } });
+  setInterval(function () { if (!document.hidden) { load(); loadOptions(); loadTrack(); loadIndicators(); } }, REFRESH_MS);
   showTab(location.hash.slice(1), true);
   setupTaxes();
+  setupPositions();
   load();
   loadOptions();
   loadTrack();
+  loadIndicators();
 })();
 </script>
 </body>

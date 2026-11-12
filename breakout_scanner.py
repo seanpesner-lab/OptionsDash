@@ -61,6 +61,7 @@ ET = ZoneInfo("America/New_York")
 MIN_PRICE = 10.0
 MIN_DOLLAR_VOL = 100e6  # 20-day average. Rough proxy for liquid options.
 
+RECENT_BARS = 30   # bars per ticker in indicators.json: a 20-day hold plus lookback
 ORDER = {"REVERSAL": 0, "MOMENTUM": 1, "SQUEEZE": 2, "AVOID": 3}
 RANK = {"TRIGGERED": 0, "TURNED": 1, "WATCH": 2, "EARLY": 3}
 
@@ -297,10 +298,17 @@ def main():
     print(f"Got bars for {len(frames)} tickers.", file=sys.stderr)
 
     rows = []
+    recent = {}   # last bars of every ticker, for the My positions tab's exit checks
     for t, df in frames.items():
         if args.asof:
             df = df.loc[:args.asof]
         f = indicators(df["Close"], df.get("High"), df.get("Volume"))
+        tail = f.iloc[-RECENT_BARS:].dropna(subset=["rsi", "hist"])
+        if len(tail):
+            recent[t] = {"d": [str(x.date()) for x in tail.index],
+                         "c": [round(float(x), 2) for x in tail.close], "r": [round(float(x), 1) for x in tail.rsi],
+                         "h": [round(float(x), 4) for x in tail["hist"]], "m": [round(float(x), 4) for x in tail.macd],
+                         "s": [round(float(x), 4) for x in tail.sig]}
         if not args.all_liquidity and "dollar_vol20" in f:
             last = f.iloc[-1]
             if last.close < MIN_PRICE or last.dollar_vol20 < MIN_DOLLAR_VOL:
@@ -358,7 +366,10 @@ def main():
         with open(os.path.join(args.site, "data", "latest.json"), "w", encoding="utf-8") as fh:
             json.dump({"meta": meta, "rows": records}, fh, separators=(",", ":"))
         out.to_csv(os.path.join(args.site, "data", "latest.csv"), index=False)
-        print(f"Wrote {args.site}/data/latest.json ({meta})", file=sys.stderr)
+        with open(os.path.join(args.site, "data", "indicators.json"), "w", encoding="utf-8") as fh:
+            json.dump({"meta": {"generated_at": meta["generated_at"], "bar_date": bar_date, "provisional": provisional,
+                                "bars": RECENT_BARS}, "tickers": recent}, fh, separators=(",", ":"))
+        print(f"Wrote {args.site}/data/latest.json ({meta}) and indicators.json ({len(recent)} tickers)", file=sys.stderr)
 
 
 if __name__ == "__main__":

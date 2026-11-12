@@ -53,6 +53,16 @@ Picks made since the last close are listed but left out of the averages until th
 
 The morning email starts with **exit alerts** (SELL, or WATCH once RSI has reached 70), and the Track record tab shows each pick's status. The first time an exit fires, it's saved to `history/exits.csv` with the stock close and the call's mid price at that run. From then on, the pick is scored at its exit.
 
+## My positions tab
+
+Tracks the contracts you actually hold. Click **Track** next to any contract on the Options tab to prefill it, adjust the price you paid and the number of contracts, and add it. You can also add one by hand. For each open position the tab shows:
+
+- **Now and P&L:** a delayed quote when the scanner prices that contract, otherwise an estimate (Black-Scholes, using the volatility implied by what you paid).
+- **Exit plan status:** the same rules as the morning email (RSI 70 then momentum fade, 8% stock stop, 20th trading day), checked on completed daily closes from `site/data/indicators.json`. The scanner writes that file with the last 30 days of close, RSI and MACD for every S&P 500 stock.
+- **Close:** enter the sell price to move a position to Closed, and optionally add it to the Taxes tab.
+
+Positions are stored only in your browser (`site/positions.js` holds the math). Use **Export backup** and **Import backup** to move them between devices.
+
 ## Taxes tab
 
 A year-to-date tax estimate for your closed trades (`site/tax.js`), using 2026 federal brackets, standard deductions and capital gains thresholds from IRS Rev. Proc. 2025-32, plus the 3.8% NIIT and a flat state rate. It nets short- and long-term results, applies the $3,000 loss limit and carryover, and flags possible wash sales.
