@@ -6,12 +6,22 @@ track.py - keep a record of each morning's top 10 and score how they did.
       Appends today's top 10 (same ranking as the email) with the best-fit call contract
       and its quote at the time. Runs once per weekday, with the morning email.
 
-  python track.py update history/picks.csv site/data/performance.json
+  python track.py update history/picks.csv site/data/performance.json [history/exits.csv]
       Scores every recorded pick:
         stock    entry = the signal day's close; return to the latest price, and after 5, 10
                  and 20 trading days, each next to SPY over the same days
         option   entry = the contract's mid price when it was picked; return to its current mid,
                  or to its value at expiration (stock close minus strike, or zero) once expired
+      and checks each pick against the exit plan (see EXIT RULES). The first time a pick's exit
+      fires, it is appended to history/exits.csv with the stock close and the call's mid at that
+      run; from then on the pick is scored at its exit instead of at today's price.
+
+EXIT RULES (your plan, tested in the 2022-2026 backtest)
+  1. Once RSI(14) has closed at 70 or above, sell at the first close where momentum fades:
+     the MACD histogram falls two days in a row from above zero, or MACD crosses below its signal.
+  2. Stop: sell if the stock closes 8% or more below the entry price.
+  3. Time limit: sell after 20 trading days (the 35-day call is close to expiring by then).
+  Day 1 is the day the pick was emailed (bought at that morning's open).
 
 Needs ALPACA_API_KEY_ID and ALPACA_API_SECRET_KEY for prices.
 """
@@ -28,6 +38,67 @@ SNAPSHOTS = "https://data.alpaca.markets/v1beta1/options/snapshots"
 FIELDS = ["signal_date", "picked_on", "rank", "ticker", "tier", "setup", "status", "score", "entry_close",
           "contract", "expiration", "strike", "entry_bid", "entry_ask", "entry_mid"]
 HORIZONS = (5, 10, 20)
+RSI_EXIT, STOP_PCT, MAX_DAYS = 70, 8, 20
+EXIT_FIELDS = ["picked_on", "ticker", "exit_date", "reason", "stock_close", "option_mid"]
+
+
+def exit_status(df, picked_on, entry_price):
+    """Walk the exit rules from the pick day to the latest bar.
+
+    df: daily bars with enough history for the indicators. Returns a dict:
+      state   'open' (keep holding), 'sell' (exit fired on the latest close: sell today),
+              'closed' (exit fired on an earlier close)
+      reason  'momentum' | 'stop' | 'time' | ''
+      date, close of the exit bar; day = trading day number; rsi70 = whether RSI has reached 70.
+    """
+    import breakout_scanner as bs
+    f = bs.indicators(df["Close"], df["High"], df["Volume"])
+    c, rsi, hist, macd, sig = (f[k].values for k in ("close", "rsi", "hist", "macd", "sig"))
+    idx = [i for i, d in enumerate(df.index) if d.date() >= picked_on]
+    stop = entry_price * (1 - STOP_PCT / 100)
+    out = {"state": "open", "reason": "", "date": None, "close": None, "day": 0, "rsi70": False,
+           "stop_price": round(stop, 2), "rsi": None}
+    if not idx:
+        return out
+    last = len(df) - 1
+    hit70 = False
+    for n, i in enumerate(idx, 1):
+        out["day"], out["rsi"] = n, round(float(rsi[i]), 1)
+        reason = ""
+        if c[i] < stop:
+            reason = "stop"
+        else:
+            hit70 = hit70 or bool(rsi[i] >= RSI_EXIT)
+            fade = bool((hist[i] < hist[i - 1] < hist[i - 2] and hist[i - 2] > 0) or (macd[i] < sig[i] and macd[i - 1] >= sig[i - 1]))
+            if hit70 and fade:
+                reason = "momentum"
+            elif n >= MAX_DAYS:
+                reason = "time"
+        out["rsi70"] = hit70
+        if reason:
+            out.update(state="sell" if i == last else "closed", reason=reason,
+                       date=df.index[i].date().isoformat(), close=round(float(c[i]), 2))
+            return out
+    return out
+
+
+def read_exits(path):
+    if not path or not os.path.exists(path):
+        return {}
+    with open(path, newline="", encoding="utf-8") as fh:
+        return {(r["picked_on"], r["ticker"]): r for r in csv.DictReader(fh)}
+
+
+def append_exits(path, rows):
+    if not rows:
+        return
+    new_file = not os.path.exists(path)
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    with open(path, "a", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=EXIT_FIELDS)
+        if new_file:
+            w.writeheader()
+        w.writerows(rows)
 
 
 def today_et():
@@ -208,7 +279,46 @@ def summarize(rows):
     return {"all": block(rows), "by_tier": {t: block([r for r in rows if r["tier"] == t]) for t in tiers}}
 
 
-def update(picks_path, out_path):
+def completed_bars(df, now_et):
+    """Drop today's bar until it's final (4:20 PM ET, after Alpaca's 15-minute delay)."""
+    if len(df) and df.index[-1].date() == now_et.date() and now_et.time() < dt.time(16, 20):
+        return df.iloc[:-1]
+    return df
+
+
+def apply_exits(rows, frames, marks, exits, now_et):
+    """Add exit status to scored rows; score exited picks at their exit. Returns new exits.csv rows."""
+    new = []
+    for r in rows:
+        df = frames.get(r["ticker"])
+        r.update(exit_state="open", exit_reason="", exit_date=None, exit_day=None, rsi_now=None, rsi70=False,
+                 stop_price=None)
+        if df is None or not r.get("entry_close"):
+            continue
+        st = exit_status(completed_bars(df, now_et), dt.date.fromisoformat(r["picked_on"]), r["entry_close"])
+        r.update(exit_day=st["day"], rsi_now=st["rsi"], rsi70=st["rsi70"], stop_price=st["stop_price"])
+        rec = exits.get((r["picked_on"], r["ticker"]))
+        if rec is None and st["state"] != "open":
+            m = marks.get(r["contract"]) if r.get("contract") else None
+            rec = {"picked_on": r["picked_on"], "ticker": r["ticker"], "exit_date": st["date"], "reason": st["reason"],
+                   "stock_close": st["close"], "option_mid": round(m["mid"], 2) if m else ""}
+            new.append(rec)
+            exits[(r["picked_on"], r["ticker"])] = rec
+            r["exit_state"] = "sell"   # newly fired: sell now
+        elif rec is not None:
+            r["exit_state"] = "sell" if st["state"] == "sell" else "closed"
+        if rec is not None:
+            r.update(exit_reason=rec["reason"], exit_date=rec["exit_date"])
+            r["stock_pct"] = ret(r["entry_close"], num(rec["stock_close"]))
+            r["last_close"] = num(rec["stock_close"])
+            if r.get("contract") and num(rec.get("option_mid")) is not None:
+                r["option_value"] = num(rec["option_mid"])
+                r["option_pct"] = ret(r["entry_mid"], r["option_value"])
+                r["option_state"] = "sold"
+    return new
+
+
+def update(picks_path, out_path, exits_path=None):
     picks = read_picks(picks_path)
     today = today_et()
     result = {"meta": {"generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -221,8 +331,9 @@ def update(picks_path, out_path):
         from breakout_scanner import fetch_alpaca
         first = min(dt.date.fromisoformat(p["signal_date"]) for p in picks)
         tickers = sorted({p["ticker"] for p in picks} | {"SPY"})
+        # ~400 extra days so RSI and MACD are fully warmed up for the exit rules.
         frames = fetch_alpaca(tickers, key, secret, os.environ.get("ALPACA_FEED", "sip"),
-                              days=(today - first).days + 10, min_bars=1)
+                              days=(today - first).days + 400, min_bars=1)
         open_syms = sorted({p["contract"] for p in picks if p["contract"] and p["expiration"]
                             and dt.date.fromisoformat(p["expiration"]) >= today})
         marks = {}
@@ -232,6 +343,12 @@ def update(picks_path, out_path):
             except Exception as e:
                 result["meta"]["error"] = f"Option prices unavailable: {e}"[:250]
         rows = score_picks(picks, frames, marks, today)
+        exits = read_exits(exits_path)
+        new_exits = apply_exits(rows, frames, marks, exits, dt.datetime.now(ET))
+        if exits_path:
+            append_exits(exits_path, new_exits)
+            if new_exits:
+                print(f"New exits: {[(e['ticker'], e['reason']) for e in new_exits]}")
         rows.sort(key=lambda r: (r["picked_on"], -r["rank"]), reverse=True)
         result.update(summary=summarize(rows), picks=rows)
         result["meta"].update(first_pick=first.isoformat(), pick_days=len({p["picked_on"] for p in picks}))
@@ -245,7 +362,7 @@ if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "record" and len(sys.argv) == 5:
         record(*sys.argv[2:5])
-    elif cmd == "update" and len(sys.argv) == 4:
-        update(*sys.argv[2:4])
+    elif cmd == "update" and len(sys.argv) in (4, 5):
+        update(*sys.argv[2:5])
     else:
         sys.exit(__doc__)

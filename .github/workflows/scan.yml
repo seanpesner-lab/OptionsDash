@@ -132,6 +132,25 @@ jobs:
           git commit -m "Picks for $(TZ=America/New_York date +%F)"
           git pull --rebase -q && git push
 
+      # Score every recorded pick and check open picks against the exit plan (RSI 70 then
+      # momentum fade, 8% stop, 20-day limit). New exits are saved to history/exits.csv.
+      # Runs before the email so the morning email carries today's exit alerts.
+      # A failure here leaves the rest of the site working.
+      - name: Track record
+        continue-on-error: true
+        env:
+          ALPACA_API_KEY_ID: ${{ secrets.ALPACA_API_KEY_ID }}
+          ALPACA_API_SECRET_KEY: ${{ secrets.ALPACA_API_SECRET_KEY }}
+        run: |
+          python track.py update history/picks.csv site/data/performance.json history/exits.csv
+          if [ -f history/exits.csv ] && [ -n "$(git status --porcelain history/exits.csv)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add history/exits.csv
+            git commit -m "Exits on $(TZ=America/New_York date +%F)"
+            git pull --rebase -q && git push
+          fi
+
       - name: Email top 10
         if: steps.mail.outputs.send != ''
         env:
@@ -144,15 +163,7 @@ jobs:
             echo "::warning::Email skipped: add the SMTP_USER, SMTP_PASSWORD and EMAIL_TO secrets."
             exit 0
           fi
-          python notify.py site/data/latest.json --options site/data/options.json
-
-      # Score every recorded pick against current prices. A failure here leaves the rest of the site working.
-      - name: Track record
-        continue-on-error: true
-        env:
-          ALPACA_API_KEY_ID: ${{ secrets.ALPACA_API_KEY_ID }}
-          ALPACA_API_SECRET_KEY: ${{ secrets.ALPACA_API_SECRET_KEY }}
-        run: python track.py update history/picks.csv site/data/performance.json
+          python notify.py site/data/latest.json --options site/data/options.json --performance site/data/performance.json
 
       - uses: actions/upload-pages-artifact@v3
         with:

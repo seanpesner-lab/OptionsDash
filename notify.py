@@ -81,24 +81,61 @@ def contract_line(c):
     return s + (", expires after earnings" if c.get("after_earnings") else "")
 
 
+PLAN_TEXT = ("Exit plan: once RSI reaches 70, sell when momentum fades (MACD histogram falls two days, "
+             "or MACD crosses below its signal); sell if the stock closes 8% below entry; "
+             "otherwise sell by the 20th trading day. Alerts for open picks appear at the top of this email.")
+
+
 def exit_line(ticker, c, stop):
-    """Exit plan: take profit at +50%, sell by the 10th trading day, stop if the stock closes 8% lower."""
-    parts = []
-    if c and c.get("take_profit"):
-        parts.append(f"take profit at {c['take_profit']:.2f} (+50%)")
-    if c and c.get("sell_by"):
-        sb = dt.date.fromisoformat(c["sell_by"])
-        parts.append(f"otherwise sell {sb:%a %b} {sb.day}")
+    """Your exit plan for a new pick: RSI 70 then momentum fade, an 8% stock stop, and a 20-day limit."""
+    parts = ["after RSI hits 70, sell when momentum fades"]
     if stop:
         parts.append(f"stop if {ticker} closes below {stop:.2f} (-8%)")
+    if c and c.get("sell_by"):
+        sb = dt.date.fromisoformat(c["sell_by"])
+        parts.append(f"sell by {sb:%a %b} {sb.day} at the latest")
     return "; ".join(parts)
 
 
-def build(data, url, options=None):
+REASON = {"momentum": "momentum faded after RSI reached 70", "stop": "stop hit (closed 8% below entry)",
+          "time": "20-trading-day limit reached"}
+
+
+def exit_alerts(perf):
+    """(sell, watch, holding) lists from performance.json for picks still being held."""
+    sell, watch, holding = [], [], 0
+    for p in (perf or {}).get("picks", []):
+        st = p.get("exit_state")
+        if st == "sell":
+            sell.append(p)
+        elif st == "open" and (p.get("exit_day") or 0) >= 1:
+            holding += 1
+            if p.get("rsi70"):
+                watch.append(p)
+    return sell, watch, holding
+
+
+def alert_lines(perf):
+    sell, watch, holding = exit_alerts(perf)
+    out = []
+    for p in sell:
+        opt = f", call {p['option_pct']:+.0f}%" if p.get("option_pct") is not None else ""
+        stock = f"stock {p['stock_pct']:+.1f}%" if p.get("stock_pct") is not None else ""
+        out.append(f"SELL {p['ticker']} (picked {p['picked_on']}): {REASON.get(p.get('exit_reason'), 'exit')}. {stock}{opt}")
+    for p in watch:
+        out.append(f"WATCH {p['ticker']} (picked {p['picked_on']}): RSI reached 70 (now {p.get('rsi_now')}). "
+                   f"Sell on the first close where momentum fades. Stop {p.get('stop_price')}.")
+    if not out and holding:
+        out.append(f"No exit signals. Holding {holding} open pick{'s' if holding != 1 else ''}.")
+    return out
+
+
+def build(data, url, options=None, perf=None):
     meta, picks = data.get("meta", {}), top10(data.get("rows", []))
     stocks = (options or {}).get("stocks", [])
     best = {s["ticker"]: (s.get("contracts") or [None])[0] for s in stocks}
     stops = {s["ticker"]: s.get("stop_price") for s in stocks}
+    alerts = alert_lines(perf)
     bar = meta.get("bar_date") or "?"
     prov = meta.get("provisional")
     d = dt.date.fromisoformat(bar) if bar != "?" else None
@@ -106,7 +143,10 @@ def build(data, url, options=None):
     subject = f"Top {len(picks)} call setups - {day}" + (" (intraday, provisional)" if prov else " close")
 
     # Plain text
-    lines = [f"Top call setups from your S&P 500 scan, {'prices so far on' if prov else 'close of'} {bar}.", ""]
+    lines = []
+    if alerts:
+        lines += ["Exit alerts for your open picks:"] + [f"  {a}" for a in alerts] + [""]
+    lines += [f"Top call setups from your S&P 500 scan, {'prices so far on' if prov else 'close of'} {bar}.", ""]
     for i, r in enumerate(picks, 1):
         ed = earnings_days(r)
         warn = f"  Earnings in {ed} days." if ed is not None and 0 <= ed <= 14 else ""
@@ -120,8 +160,7 @@ def build(data, url, options=None):
         lines.append("No stock fits a call setup today.")
     lines += ["", f"Dashboard: {url}", "",
               "Ranked by your scanner's rules: Ready (reversal triggered or turned), then Building (momentum, squeeze), "
-              "then Setting up (oversold watch). Exit plan per trade: take profit when the call is up 50%, "
-              "otherwise sell after 10 trading days, and sell if the stock closes 8% below its price at entry. "
+              "then Setting up (oversold watch). " + PLAN_TEXT + " "
               "Rule matches, not advice. Check the option chain, spread and earnings date before trading."]
     text = "\n".join(lines)
 
@@ -157,6 +196,18 @@ def build(data, url, options=None):
 </tr>""")
     banner = ('<p style="background:#fff6e0;border:1px solid #f0d58a;border-radius:6px;padding:8px 12px;font-size:13px">'
               "Intraday run: these use today's prices so far and can change before the close.</p>") if prov else ""
+    if alerts:
+        colors = {"SELL": "#c2410c", "WATCH": "#a96a00"}
+        items = ""
+        for a in alerts:
+            head, _, rest = a.partition(" ")
+            if head in colors:
+                items += f'<li style="margin:4px 0"><b style="color:{colors[head]}">{e(head)}</b> {e(rest)}</li>'
+            else:
+                items += f'<li style="margin:4px 0">{e(a)}</li>'
+        banner = ('<div style="background:#fff;border:1px solid #e3e8e5;border-radius:8px;padding:10px 14px;margin:0 0 16px">'
+                  '<div style="font-weight:600;font-size:14px;margin-bottom:4px">Exit alerts for your open picks</div>'
+                  f'<ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.45">{items}</ul></div>') + banner
     body = "".join(rows_html) or '<tr><td style="padding:12px;color:#5b6a63">No stock fits a call setup today.</td></tr>'
     html_doc = f"""<!doctype html><html><body style="margin:0;background:#f5f7f6;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#14201b">
 <div style="max-width:640px;margin:0 auto;padding:24px 16px">
@@ -165,7 +216,7 @@ def build(data, url, options=None):
   {banner}
   <table role="presentation" style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #e3e8e5;border-radius:8px">{body}</table>
   <p style="margin:18px 0"><a href="{e(url)}" style="background:#0f766e;color:#fff;text-decoration:none;padding:9px 16px;border-radius:6px;font-size:14px;display:inline-block">Open the dashboard</a></p>
-  <p style="font-size:12px;color:#5b6a63;line-height:1.5">Ranked by your scanner's rules: <b>Ready</b> (reversal triggered or turned), then <b>Building</b> (momentum with rising MACD histogram, squeeze), then <b>Setting up</b> (oversold, selling fading). Higher score first within each group. Exit plan per trade: take profit when the call is up 50%, otherwise sell after 10 trading days, and sell if the stock closes 8% below its price at entry. These are rule matches, not advice. Check the option chain, bid-ask spread and earnings date before trading.</p>
+  <p style="font-size:12px;color:#5b6a63;line-height:1.5">Ranked by your scanner's rules: <b>Ready</b> (reversal triggered or turned), then <b>Building</b> (momentum with rising MACD histogram, squeeze), then <b>Setting up</b> (oversold, selling fading). Higher score first within each group. {e(PLAN_TEXT)} These are rule matches, not advice. Check the option chain, bid-ask spread and earnings date before trading.</p>
 </div></body></html>"""
     return subject, text, html_doc
 
@@ -174,16 +225,20 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("json_path")
     ap.add_argument("--options", help="options.json from options_scan.py, to add the best-fit contract per stock")
+    ap.add_argument("--performance", help="performance.json from track.py, for exit alerts on open picks")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
     with open(args.json_path, encoding="utf-8") as fh:
         data = json.load(fh)
-    options = None
+    options = perf = None
     if args.options and os.path.exists(args.options):
         with open(args.options, encoding="utf-8") as fh:
             options = json.load(fh)
+    if args.performance and os.path.exists(args.performance):
+        with open(args.performance, encoding="utf-8") as fh:
+            perf = json.load(fh)
     url = os.environ.get("DASHBOARD_URL", "https://seanpesner-lab.github.io/OptionsDash/")
-    subject, text, html_doc = build(data, url, options)
+    subject, text, html_doc = build(data, url, options, perf)
 
     if args.dry_run:
         with open("email.html", "w", encoding="utf-8") as fh:

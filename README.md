@@ -45,6 +45,14 @@ The morning run also appends that day's top 10, with the best-fit call and its q
 
 Picks made since the last close are listed but left out of the averages until they've had a trading day to move.
 
+**Exit plan.** Every run also checks each open pick against your exit rules, using completed daily closes:
+
+1. Once RSI(14) has closed at 70 or above, sell at the first close where momentum fades. That means the MACD histogram falls two days in a row from above zero, or MACD crosses below its signal.
+2. Sell if the stock closes 8% or more below the entry price.
+3. Sell by the 20th trading day at the latest.
+
+The morning email starts with **exit alerts** (SELL, or WATCH once RSI has reached 70), and the Track record tab shows each pick's status. The first time an exit fires, it's saved to `history/exits.csv` with the stock close and the call's mid price at that run. From then on, the pick is scored at its exit.
+
 ## Taxes tab
 
 A year-to-date tax estimate for your closed trades (`site/tax.js`), using 2026 federal brackets, standard deductions and capital gains thresholds from IRS Rev. Proc. 2025-32, plus the 3.8% NIIT and a flat state rate. It nets short- and long-term results, applies the $3,000 loss limit and carryover, and flags possible wash sales.

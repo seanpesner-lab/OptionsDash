@@ -5,7 +5,7 @@ options_scan.py - call contracts that fit your rules, for the top 10 stocks of t
 For each of the top 10 (same ranking as the daily email, see notify.py) it pulls the call chain
 from Alpaca's options snapshots and keeps contracts that fit:
 
-  Expiration   30 to 60 days out
+  Expiration   35 to 60 days out
   Strike       delta 0.40 to 0.60
   Liquidity    bid and ask both above zero, spread at most 10% of the mid price
   Ranking      contracts that traded today first, then tightest spread; 3 per stock
@@ -33,17 +33,16 @@ SNAPSHOTS = "https://data.alpaca.markets/v1beta1/options/snapshots/{}"
 ET = ZoneInfo("America/New_York")
 
 RULES = {
-    "dte_min": 30, "dte_max": 60,
+    "dte_min": 35, "dte_max": 60,   # 35+ so a 20-trading-day hold still leaves about a week
     "delta_min": 0.40, "delta_max": 0.60,
     "max_spread_pct": 10.0,
     "per_stock": 3,
-    # Exit plan (tested in backtest_filters.py and a stop-loss study):
-    #   take profit when the call is up 50%, otherwise sell after 10 trading days,
-    #   and sell if the stock closes 8% or more below its price at entry.
-    # The 8% stop cost about 0.4% per trade on average in the test but caps the worst losers;
-    # tighter stops cost more.
-    "take_profit_pct": 50,
-    "hold_days": 10,
+    # Exit plan (yours; see track.py EXIT RULES): once RSI reaches 70, sell when momentum fades
+    # (MACD histogram falls 2 days from above zero, or MACD crosses below its signal); sell if the
+    # stock closes 8% below entry; otherwise sell by the 20th trading day. track.py watches open
+    # picks every run and flags the day to sell.
+    "rsi_exit": 70,
+    "hold_days": 20,
     "stop_pct": 8,
 }
 
@@ -126,7 +125,6 @@ def pick_contracts(chain, spot, today, next_earnings):
             "theta": None if theta is None else round(theta, 3),
             "breakeven": round(strike + mid, 2), "move_pct": round(((strike + mid) / spot - 1) * 100, 1),
             "volume": vol, "after_earnings": after_earnings,
-            "take_profit": round(mid * (1 + RULES["take_profit_pct"] / 100), 2),
             "sell_by": sell_by(today.isoformat()),
         })
     rows.sort(key=lambda c: (c["volume"] == 0, c["spread_pct"], abs(c["delta"] - 0.5)))

@@ -170,6 +170,7 @@ table.otab td:first-child { font-weight: 400; }
 .taxtab td:first-child { font-family: var(--sans); color: var(--muted); }
 .taxtab tr.total td { font-weight: 600; color: var(--fg); }
 .rowbtns { display: flex; gap: 6px; justify-content: flex-end; }
+.alert-list { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
 @media (prefers-reduced-motion: no-preference) { .card, .tile { transition: border-color .2s; } .card:hover { border-color: var(--muted); } }
 </style>
 </head>
@@ -278,12 +279,12 @@ table.otab td:first-child { font-weight: 400; }
         <p>The same 10 stocks as the daily email, ranked Ready, then Building, then Setting up. For each, the calls that fit the rules below, tightest spread first.</p>
       </div>
       <ul class="rulechips" aria-label="Contract rules">
-        <li>30–60 days to expiration</li>
+        <li>35–60 days to expiration</li>
         <li>Delta 0.40–0.60</li>
         <li>Spread ≤ 10% of mid</li>
         <li>Traded today ranked first</li>
       </ul>
-      <p class="cap"><b>Exit plan for each trade:</b> take profit when the call is up 50%, otherwise sell after 10 trading days, and sell if the stock closes 8% or more below its price at entry. In the 2022–2026 backtest the +50% take-profit turned the typical trade from a loss into a small gain; the 8% stop cost about 0.4% per trade on average but caps the worst losers.</p>
+      <p class="cap"><b>Exit plan for each trade:</b> once RSI reaches 70, sell at the first close where momentum fades (the MACD histogram falls two days in a row, or MACD crosses below its signal). Sell if the stock closes 8% or more below its price at entry, and sell by the 20th trading day at the latest. The <a href="#track">Track record</a> tab and the morning email flag the day each open pick hits an exit. In the 2022–2026 backtest this plan had a high average but a losing typical trade: most of the gain came from a few big winners, so size each trade so losing the whole premium is acceptable.</p>
       <p class="banner" id="opt-error" hidden></p>
       <p class="cap muted" id="opt-meta"></p>
       <div class="optlist" id="opt-list"><p class="empty">Loading option chains…</p></div>
@@ -297,6 +298,7 @@ table.otab td:first-child { font-weight: 400; }
         <p>Every morning's top 10 from the email is logged with its best-fit call. Stock returns run from the signal day's close; option returns from the contract's mid price when it was picked. SPY over the same days is the benchmark.</p>
       </div>
       <p class="banner" id="trk-error" hidden></p>
+      <div class="alerts" id="trk-alerts"></div>
       <div class="tiles" id="trk-tiles"></div>
       <p class="cap muted" id="trk-meta"></p>
     </section>
@@ -320,12 +322,12 @@ table.otab td:first-child { font-weight: 400; }
     <section class="sec">
       <div class="sec-head">
         <h2>Every pick</h2>
-        <p>Newest first. "Now" is the latest price; an expired call is valued at what it was worth at expiration.</p>
+        <p>Newest first. "Now" is the latest price, or the price at the exit once a pick has been sold under the exit plan. An expired call is valued at what it was worth at expiration.</p>
       </div>
       <div class="tablewrap">
         <table class="otab">
           <thead><tr>
-            <th>Picked</th><th>Ticker</th><th>#</th><th>Group</th><th>Entry</th><th>Now</th><th>Stock</th><th>vs SPY</th>
+            <th>Picked</th><th>Ticker</th><th>#</th><th>Group</th><th>Exit plan</th><th>Entry</th><th>Now</th><th>Stock</th><th>vs SPY</th>
             <th>5d</th><th>10d</th><th>Call</th><th>Paid</th><th>Now</th><th>Call return</th>
           </tr></thead>
           <tbody id="trk-rows"></tbody>
@@ -650,7 +652,7 @@ table.otab td:first-child { font-weight: 400; }
       } else {
         var wrap = el('div', 'tablewrap'), t = el('table', 'otab');
         var hr = el('tr');
-        ['Expiration', 'Strike', 'Mid', 'Cost', 'Take profit', 'Sell by', 'Spread', 'Delta', 'IV', 'Theta/day', 'Move to break even', 'Vol today'].forEach(function (h) { hr.append(el('th', '', h)); });
+        ['Expiration', 'Strike', 'Mid', 'Cost', 'Sell by (latest)', 'Spread', 'Delta', 'IV', 'Theta/day', 'Move to break even', 'Vol today'].forEach(function (h) { hr.append(el('th', '', h)); });
         var thead = el('thead'); thead.append(hr);
         var tb = el('tbody');
         cs.forEach(function (c) {
@@ -659,7 +661,6 @@ table.otab td:first-child { font-weight: 400; }
           if (c.after_earnings) { exp.append(' '); exp.append(el('span', 'flag', 'after earnings')); }
           tr.append(exp, el('td', '', fx(c.strike, 2)), el('td', '', fx(c.mid, 2)),
             el('td', '', '$' + d3.format(',')(c.cost)),
-            el('td', 'up', c.take_profit == null ? '—' : fx(c.take_profit, 2)),
             el('td', '', c.sell_by ? fmtShort(utc(c.sell_by)) : '—'),
             el('td', c.spread_pct > 5 ? 'warn' : '', fx(c.spread_pct, 1) + '%'),
             el('td', '', fx(c.delta, 2)), el('td', '', c.iv_pct == null ? '—' : fx(c.iv_pct, 0) + '%'),
@@ -719,18 +720,50 @@ table.otab td:first-child { font-weight: 400; }
       tb.append(tr);
     });
 
+    // Exit alerts: picks to sell today, and picks whose RSI has reached 70 (sell on the first fade)
+    var REASON = {momentum: 'momentum faded after RSI 70', stop: 'stop hit (closed 8% below entry)', time: '20-day limit reached'};
+    var al = $('trk-alerts'); al.replaceChildren();
+    var sells = picks.filter(function (p) { return p.exit_state === 'sell'; });
+    var watch = picks.filter(function (p) { return p.exit_state === 'open' && p.rsi70; });
+    var holding = picks.filter(function (p) { return p.exit_state === 'open' && p.exit_day >= 1; }).length;
+    if (sells.length || watch.length || holding) {
+      var box = el('div', 'banner'); box.append(el('b', '', 'Exit alerts'));
+      var ul = el('ul', 'alert-list');
+      sells.forEach(function (p) {
+        var li = el('li'); li.append(el('b', 'neg', 'Sell ' + p.ticker), ' (picked ' + fmtShort(utc(p.picked_on)) + '): ' + (REASON[p.exit_reason] || 'exit') +
+          (p.stock_pct != null ? ' · stock ' + (p.stock_pct > 0 ? '+' : '') + fx(p.stock_pct, 1) + '%' : '') +
+          (p.option_pct != null ? ' · call ' + (p.option_pct > 0 ? '+' : '') + fx(p.option_pct, 0) + '%' : ''));
+        ul.append(li);
+      });
+      watch.forEach(function (p) {
+        var li = el('li'); li.append(el('b', 'warn', 'Watch ' + p.ticker), ' (picked ' + fmtShort(utc(p.picked_on)) + '): RSI reached 70, now ' + fx(p.rsi_now, 1) + '. Sell on the first close where momentum fades.');
+        ul.append(li);
+      });
+      if (!sells.length && !watch.length) ul.append(el('li', '', 'No exit signals. Holding ' + holding + ' open pick' + (holding === 1 ? '' : 's') + '.'));
+      box.append(ul); al.append(box);
+    }
+
     var rows = $('trk-rows'); rows.replaceChildren();
     if (!picks.length) {
       var tr0 = el('tr'), td0 = el('td', 'empty', 'Tracking starts with the first morning email. Each weekday adds 10 picks here, and returns fill in as prices move.');
-      td0.colSpan = 14; td0.style.whiteSpace = 'normal'; tr0.append(td0); rows.append(tr0); return;
+      td0.colSpan = 15; td0.style.whiteSpace = 'normal'; tr0.append(td0); rows.append(tr0); return;
+    }
+    function exitCell(p) {
+      if (p.exit_state === 'sell') return el('td', 'neg', 'Sell today: ' + (REASON[p.exit_reason] || 'exit'));
+      if (p.exit_state === 'closed') return el('td', 'muted', 'Sold ' + (p.exit_date ? fmtShort(utc(p.exit_date)) : '') + ' · ' + (REASON[p.exit_reason] || ''));
+      if (!p.exit_day) return el('td', 'muted', 'Not started');
+      var td = el('td', p.rsi70 ? 'warn' : '', (p.rsi70 ? 'RSI hit 70, watch for fade' : 'Holding') + ' · day ' + p.exit_day + '/20');
+      if (p.stop_price) td.title = 'Stop: stock closes below ' + fx(p.stop_price, 2) + ' · RSI now ' + fx(p.rsi_now, 1);
+      return td;
     }
     picks.forEach(function (p) {
       var tr = el('tr');
       var call = p.contract ? fmtShort(utc(p.expiration)) + ' ' + d3.format('~g')(p.strike) + 'C' : '—';
       var state = el('td', p.option_state === 'expired' ? 'muted' : '', call);
       if (p.option_state === 'expired') { state.append(' '); state.append(el('span', 'flag', 'expired')); }
+      if (p.option_state === 'sold') { state.append(' '); state.append(el('span', 'flag', 'sold')); }
       tr.append(el('td', '', fmtShort(utc(p.picked_on))), el('td', '', p.ticker), el('td', 'muted', String(p.rank)),
-        el('td', 'tier-' + String(p.tier).split(' ')[0], p.tier),
+        el('td', 'tier-' + String(p.tier).split(' ')[0], p.tier), exitCell(p),
         el('td', '', fx(p.entry_close, 2)), el('td', '', fx(p.last_close, 2)),
         pct(p.stock_pct), pct(p.vs_spy_pct), pct(p.d5_pct), pct(p.d10_pct), state,
         el('td', '', p.entry_mid == null ? '—' : fx(p.entry_mid, 2)), el('td', '', p.option_value == null ? '—' : fx(p.option_value, 2)),
