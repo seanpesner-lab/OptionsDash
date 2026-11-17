@@ -138,6 +138,8 @@ def evaluate(f):
         "macd_hist": round(r["hist"], 3), "hist_rising": bool(hist_up),
         "vs_sma20_pct": round(dist20 * 100, 1), "vs_sma50_pct": round(dist50 * 100, 1),
         "above_sma200": (None if pd.isna(r.sma200) else bool(r.close > r.sma200)),
+        # Closed lower two days in a row: kept in the scan, but left out of the top 10 and the email.
+        "down_2d": bool(f.close.iloc[-1] < f.close.iloc[-2] < f.close.iloc[-3]),
     }
     if "dollar_vol20" in f:
         out["dollar_vol20_M"] = round(r.dollar_vol20 / 1e6)

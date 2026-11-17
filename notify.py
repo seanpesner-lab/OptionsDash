@@ -6,7 +6,8 @@ Ranking (rule-based, from your own setups, not advice):
   Tier 1  Ready       REVERSAL TRIGGERED or TURNED
   Tier 2  Building    MOMENTUM TRIGGERED with the MACD histogram rising, or SQUEEZE
   Tier 3  Setting up  REVERSAL WATCH (oversold, selling fading), then MOMENTUM with histogram falling
-  Within a tier, higher scanner score first. EARLY and AVOID are never included.
+  Within a tier, higher scanner score first. EARLY and AVOID are never included, and neither is
+  any stock that closed lower two days in a row.
   Earnings within 14 days are flagged, since implied volatility usually drops after the report.
 
 Environment
@@ -38,6 +39,9 @@ TIER_LABEL = {1: "Ready", 2: "Building", 3: "Setting up"}
 
 
 def tier(r):
+    # Never recommend a call on a stock that has closed lower two days in a row.
+    if r.get("down_2d"):
+        return None
     if r["setup"] == "MOMENTUM":
         return TIERS.get(("MOMENTUM", r["status"], bool(r.get("hist_rising"))))
     return TIERS.get((r["setup"], r["status"]))
