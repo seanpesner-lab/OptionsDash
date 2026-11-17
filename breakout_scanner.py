@@ -220,6 +220,55 @@ def fetch_alpaca(tickers, key, secret, feed="sip", days=740, min_bars=61):
     return frames
 
 
+def group_strength(frames):
+    """Sector and industry strength, for context on the dashboard (not used to pick stocks).
+
+    Each GICS sector / sub-industry gets the average 1-month (21 trading days) and 6-month (126)
+    return of its members, minus the average of all stocks scanned. Sectors are ranked 1-11 by the
+    6-month figure; industries with 4+ members get a percentile (top 10% = strongest).
+    Backtests (backtest_sector_momentum.py, backtest_sector_6m.py) found no reliable edge from these.
+    """
+    empty = {"by_ticker": {}, "sectors": []}
+    try:
+        meta = pd.read_csv(SP500_CSV)
+    except Exception as e:
+        print(f"Sector data unavailable ({e}).", file=sys.stderr)
+        return empty
+    meta["key"] = meta.Symbol.str.replace("-", ".", regex=False)
+    meta = meta.set_index("key")
+    r = []
+    for t, df in frames.items():
+        c = df["Close"].dropna()
+        if t in meta.index and len(c) > 127:
+            r.append({"ticker": t, "sector": meta.at[t, "GICS Sector"], "industry": meta.at[t, "GICS Sub-Industry"],
+                      "r1": c.iloc[-1] / c.iloc[-22] - 1, "r6": c.iloc[-1] / c.iloc[-127] - 1})
+    if not r:
+        return empty
+    d = pd.DataFrame(r)
+    m1, m6 = d.r1.mean(), d.r6.mean()
+    sec = d.groupby("sector").agg(n=("ticker", "size"), r1=("r1", "mean"), r6=("r6", "mean"))
+    sec["vs1"], sec["vs6"] = sec.r1 - m1, sec.r6 - m6
+    sec["rank6"] = sec.vs6.rank(ascending=False).astype(int)
+    sec["rank1"] = sec.vs1.rank(ascending=False).astype(int)
+    ind = d.groupby("industry").agg(n=("ticker", "size"), r6=("r6", "mean"))
+    ind = ind[ind.n >= 4]
+    ind["vs6"] = ind.r6 - m6
+    ind["top_pct"] = (ind.vs6.rank(ascending=False, pct=True) * 100).round().astype(int)
+    by_ticker = {}
+    for row in d.itertuples():
+        s = sec.loc[row.sector]
+        info = {"sector": row.sector, "industry": row.industry, "sector_rank6": int(s.rank6), "sector_rank1": int(s.rank1),
+                "sector_vs6_pct": round(float(s.vs6) * 100, 1), "sector_vs1_pct": round(float(s.vs1) * 100, 1)}
+        if row.industry in ind.index:
+            info.update(industry_top_pct=int(ind.at[row.industry, "top_pct"]),
+                        industry_vs6_pct=round(float(ind.at[row.industry, "vs6"]) * 100, 1))
+        by_ticker[row.ticker] = info
+    sectors = [{"sector": n, "stocks": int(s.n), "rank6": int(s.rank6), "rank1": int(s.rank1),
+                "vs6_pct": round(float(s.vs6) * 100, 1), "vs1_pct": round(float(s.vs1) * 100, 1)}
+               for n, s in sec.sort_values("rank6").iterrows()]
+    return {"by_ticker": by_ticker, "sectors": sectors}
+
+
 def drop_premarket(frames, now_et, force=False):
     """Before the 9:30 AM open (or always, with force), drop a bar dated today.
 
@@ -298,6 +347,7 @@ def main():
         # MORNING_CATCHUP=1: rerun a missed morning scan later in the day, on the previous close.
         frames = drop_premarket(frames, dt.datetime.now(ET), force=os.environ.get("MORNING_CATCHUP") == "1")
     print(f"Got bars for {len(frames)} tickers.", file=sys.stderr)
+    groups = group_strength(frames)
 
     rows = []
     recent = {}   # last bars of every ticker, for the My positions tab's exit checks
@@ -317,7 +367,7 @@ def main():
                 continue
         res = evaluate(f)
         if res:
-            rows.append({"ticker": t, **res})
+            rows.append({"ticker": t, **res, **groups["by_ticker"].get(t, {})})
 
     if not rows:
         print("No setups found.")
@@ -362,6 +412,7 @@ def main():
             "universe": len(tickers),
             "with_data": len(frames),
             "hits": int(len(out)),
+            "sectors": groups["sectors"],
         }
         records = json.loads(out.to_json(orient="records")) if len(out) else []  # numpy types -> plain JSON
         os.makedirs(os.path.join(args.site, "data"), exist_ok=True)

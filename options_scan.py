@@ -156,6 +156,8 @@ def main():
         stock = {"ticker": r["ticker"], "tier": TIER_LABEL[tier(r)], "setup": r["setup"], "status": r["status"],
                  "reason": reason(r), "close": r["close"], "score": r["score"],
                  "stop_price": round(r["close"] * (1 - RULES["stop_pct"] / 100), 2),
+                 **{k: r.get(k) for k in ("sector", "industry", "sector_rank6", "sector_rank1", "sector_vs6_pct",
+                                          "industry_top_pct", "industry_vs6_pct") if r.get(k) is not None},
                  "next_earnings": r.get("next_earnings") or "", "contracts": [], "checked": 0, "error": None}
         if sess:
             try:

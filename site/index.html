@@ -212,6 +212,19 @@ table.otab td:first-child { font-weight: 400; }
     <div class="ready" id="ready-cards"></div>
   </section>
 
+  <section class="sec" id="sectors">
+    <div class="sec-head">
+      <h2>Sector strength</h2>
+      <p>Each sector's average stock return minus the average of all S&amp;P 500 stocks, ranked by the last 6 months. Context only: in the 2022–2026 backtests, picking from leading sectors didn't improve these setups.</p>
+    </div>
+    <div class="tablewrap">
+      <table class="otab">
+        <thead><tr><th>6M rank</th><th>Sector</th><th>Last 6 months</th><th>Last month</th><th>1M rank</th><th>Hits today</th></tr></thead>
+        <tbody id="sector-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
   <section class="sec" id="map">
     <div class="sec-head">
       <h2>Where every hit sits</h2>
@@ -257,6 +270,8 @@ table.otab td:first-child { font-weight: 400; }
           <th><button class="sort" type="button" data-key="above_sma200">Above 200d</button></th>
           <th><button class="sort" type="button" data-key="dollar_vol20_M">$ vol 20d (M)</button></th>
           <th><button class="sort" type="button" data-key="next_earnings">Next earnings</button></th>
+          <th><button class="sort" type="button" data-key="sector_rank6">Sector (6M rank)</button></th>
+          <th><button class="sort" type="button" data-key="industry_top_pct">Industry (6M)</button></th>
         </tr></thead>
         <tbody id="rows"></tbody>
       </table>
@@ -583,6 +598,27 @@ table.otab td:first-child { font-weight: 400; }
     });
   }
 
+  var SECTOR_SHORT = {'Information Technology': 'Info Tech', 'Communication Services': 'Comm Services', 'Consumer Discretionary': 'Cons Discretionary',
+    'Consumer Staples': 'Cons Staples'};
+  function sectorShort(s) { return SECTOR_SHORT[s] || s || '—'; }
+  function sectorLabel(r) { return r.sector ? sectorShort(r.sector) + ' · #' + r.sector_rank6 + ' of 11' : '—'; }
+  function industryLabel(r) { return r.industry ? r.industry + (r.industry_top_pct != null ? ' · top ' + r.industry_top_pct + '%' : '') : '—'; }
+  function strengthCls(rank) { return rank == null ? 'muted' : rank <= 3 ? 'up' : rank >= 9 ? 'neg' : ''; }
+
+  function renderSectors() {
+    var tb = $('sector-rows'); tb.replaceChildren();
+    var secs = (data.meta && data.meta.sectors) || [];
+    if (!secs.length) { var t0 = el('tr'), d0 = el('td', 'empty', 'Sector data appears after the next scan.'); d0.colSpan = 6; t0.append(d0); tb.append(t0); return; }
+    var hits = {};
+    data.rows.forEach(function (r) { if (r.sector) hits[r.sector] = (hits[r.sector] || 0) + 1; });
+    secs.forEach(function (s) {
+      var tr = el('tr');
+      tr.append(el('td', strengthCls(s.rank6), '#' + s.rank6), el('td', '', sectorShort(s.sector)),
+        pct(s.vs6_pct), pct(s.vs1_pct), el('td', strengthCls(s.rank1), '#' + s.rank1), el('td', '', String(hits[s.sector] || 0)));
+      tb.append(tr);
+    });
+  }
+
   function renderReady() {
     var box = $('ready-cards'); box.replaceChildren();
     var ready = data.rows.filter(hot).sort(defaultSort);
@@ -667,7 +703,7 @@ table.otab td:first-child { font-weight: 400; }
     } else rows.sort(defaultSort);
     $('shown').textContent = rows.length + ' of ' + data.rows.length + ' shown';
     if (!rows.length) {
-      var tr0 = el('tr'), td0 = el('td', 'empty', 'No stocks match this filter.'); td0.colSpan = 14; tr0.append(td0); tbody.append(tr0); return;
+      var tr0 = el('tr'), td0 = el('td', 'empty', 'No stocks match this filter.'); td0.colSpan = 16; tr0.append(td0); tbody.append(tr0); return;
     }
     rows.forEach(function (r) {
       var tr = el('tr'), ei = earningsInfo(r);
@@ -682,12 +718,14 @@ table.otab td:first-child { font-weight: 400; }
         el('td', r.vs_sma20_pct < 0 ? 'neg' : '', fx(r.vs_sma20_pct, 1)),
         el('td', '', r.above_sma200 == null ? '—' : r.above_sma200 ? 'Yes' : 'No'),
         el('td', '', r.dollar_vol20_M == null ? '—' : d3.format(',')(r.dollar_vol20_M)),
-        earn);
+        earn,
+        el('td', strengthCls(r.sector_rank6), sectorLabel(r)),
+        el('td', r.industry_top_pct == null ? 'muted' : r.industry_top_pct <= 20 ? 'up' : r.industry_top_pct >= 80 ? 'neg' : '', industryLabel(r)));
       tbody.append(tr);
     });
   }
 
-  function renderAll() { renderHeader(); renderTiles(); renderReady(); renderChart(); renderTable(); }
+  function renderAll() { renderHeader(); renderTiles(); renderSectors(); renderReady(); renderChart(); renderTable(); }
 
   // ---------------------------------------------------------------- options tab
   var optStamp = null;
@@ -710,6 +748,8 @@ table.otab td:first-child { font-weight: 400; }
         el('span', 'cap mono', 'Stock ' + fx(s.close, 2)));
       if (s.next_earnings) head.append(el('span', 'cap muted', 'Earnings ' + fmtShort(utc(s.next_earnings))));
       if (s.stop_price) head.append(el('span', 'cap neg mono', 'Stop: stock closes below ' + fx(s.stop_price, 2)));
+      if (s.sector) head.append(el('span', 'cap ' + strengthCls(s.sector_rank6), sectorLabel(s) + ' (6M)'));
+      if (s.industry) head.append(el('span', 'cap muted', industryLabel(s)));
       head.append(el('p', 'ostock-reason', s.reason));
       box.append(head);
       var cs = s.contracts || [];
