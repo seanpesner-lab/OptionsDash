@@ -1,0 +1,130 @@
+ticker,bar_date,setup,status,score,close,rsi,rsi_min7,macd_hist,hist_rising,vs_sma20_pct,vs_sma50_pct,above_sma200,down_2d,dollar_vol20_M,sector,industry,sector_rank6,sector_rank1,sector_vs6_pct,sector_vs1_pct,industry_top_pct,industry_vs6_pct,next_earnings
+TER,2026-11-24,REVERSAL,TRIGGERED,51.3,213.22,35.7,29.2,0.977,False,-13.7,-34.1,False,False,1132,Information Technology,Semiconductor Materials & Equipment,11,11,-13.4,-13.8,100.0,-38.8,
+CAT,2026-11-24,REVERSAL,TRIGGERED,47.3,540.63,33.8,24.2,0.627,True,-8.0,-23.2,False,False,2488,Industrials,Construction Machinery & Heavy Transportation Equipment,6,8,-4.5,1.3,92.0,-23.3,
+LRCX,2026-11-24,REVERSAL,TRIGGERED,44.0,196.16,38.7,30.4,0.338,False,-10.4,-25.8,False,False,3038,Information Technology,Semiconductor Materials & Equipment,11,11,-13.4,-13.8,100.0,-38.8,
+AXON,2026-11-24,REVERSAL,TRIGGERED,42.9,319.32,39.6,27.1,0.683,True,-7.8,-18.6,False,False,597,Industrials,Aerospace & Defense,6,8,-4.5,1.3,82.0,-11.0,
+GOOG,2026-11-24,REVERSAL,TRIGGERED,33.5,276.58,38.8,26.8,0.616,True,-2.4,-12.7,False,False,8618,Communication Services,Interactive Media & Services,10,4,-13.2,4.2,96.0,-30.6,
+GOOGL,2026-11-24,REVERSAL,TRIGGERED,32.9,279.05,39.6,27.8,0.654,True,-2.3,-12.7,False,False,13347,Communication Services,Interactive Media & Services,10,4,-13.2,4.2,96.0,-30.6,
+KEYS,2026-11-24,REVERSAL,TRIGGERED,31.3,272.22,40.2,32.5,0.017,False,-6.8,-17.1,False,False,510,Information Technology,Electronic Equipment & Instruments,11,11,-13.4,-13.8,24.0,9.6,
+INTC,2026-11-24,REVERSAL,TURNED,53.1,54.8,36.2,28.0,1.066,True,-10.8,-38.2,False,False,9676,Information Technology,Semiconductors,11,11,-13.4,-13.8,98.0,-34.5,
+RDDT,2026-11-24,REVERSAL,TURNED,45.5,90.34,34.0,28.4,0.606,True,-8.4,-30.6,False,False,788,Communication Services,Interactive Media & Services,10,4,-13.2,4.2,96.0,-30.6,
+FFIV,2026-11-24,REVERSAL,TURNED,40.8,316.87,36.7,23.2,3.57,True,-1.7,-20.9,False,False,384,Information Technology,Communications Equipment,11,11,-13.4,-13.8,90.0,-21.8,
+FTNT,2026-11-24,REVERSAL,TURNED,32.0,132.5,43.2,30.8,1.997,True,1.8,-17.1,True,False,911,Information Technology,Systems Software,11,11,-13.4,-13.8,20.0,11.2,
+NVDA,2026-11-24,REVERSAL,WATCH,62.3,155.38,39.5,15.0,-1.191,True,-11.6,-24.2,False,False,55859,Information Technology,Semiconductors,11,11,-13.4,-13.8,98.0,-34.5,
+MRVL,2026-11-24,REVERSAL,WATCH,54.6,131.57,35.3,27.9,-0.074,True,-18.3,-39.4,False,False,5533,Information Technology,Semiconductors,11,11,-13.4,-13.8,98.0,-34.5,2026-12-01
+COIN,2026-11-24,REVERSAL,WATCH,52.8,102.34,27.3,22.9,-1.887,True,-21.4,-36.3,False,False,1233,Financials,Financial Exchanges & Data,3,7,5.2,2.3,38.0,4.3,
+LITE,2026-11-24,REVERSAL,WATCH,52.2,487.12,35.9,30.1,-2.249,True,-21.7,-40.1,False,False,4077,Information Technology,Communications Equipment,11,11,-13.4,-13.8,90.0,-21.8,
+HOOD,2026-11-24,REVERSAL,WATCH,52.1,65.65,30.4,22.8,-0.75,True,-16.2,-32.1,False,False,1635,Financials,Investment Banking & Brokerage,3,7,5.2,2.3,80.0,-10.0,
+DELL,2026-11-24,REVERSAL,WATCH,50.5,295.28,36.5,28.5,-0.411,True,-17.5,-36.1,False,False,3124,Information Technology,"Technology Hardware, Storage & Peripherals",11,11,-13.4,-13.8,88.0,-18.4,2026-11-24
+SMCI,2026-11-24,REVERSAL,WATCH,48.1,22.62,34.5,28.0,-0.24,True,-18.8,-34.4,False,False,1352,Information Technology,"Technology Hardware, Storage & Peripherals",11,11,-13.4,-13.8,88.0,-18.4,
+FCX,2026-11-24,REVERSAL,WATCH,47.5,47.73,29.2,21.0,-1.041,True,-17.6,-27.0,False,False,919,Materials,Copper,7,9,-5.9,-1.0,,,
+DDOG,2026-11-24,REVERSAL,WATCH,46.6,165.38,32.1,25.3,-0.584,True,-13.7,-29.9,False,False,971,Information Technology,Application Software,11,11,-13.4,-13.8,46.0,3.1,
+NOW,2026-11-24,REVERSAL,WATCH,45.4,91.74,30.3,24.1,-0.412,True,-10.2,-27.1,False,False,2255,Information Technology,Systems Software,11,11,-13.4,-13.8,20.0,11.2,
+BE,2026-11-24,REVERSAL,WATCH,44.7,156.41,39.1,32.4,-1.569,True,-16.5,-32.1,False,False,3266,Industrials,Electrical Components & Equipment,6,8,-4.5,1.3,94.0,-23.6,
+TWLO,2026-11-24,REVERSAL,WATCH,41.8,180.61,33.6,26.9,-1.699,True,-12.1,-26.6,False,False,567,Information Technology,Systems Software,11,11,-13.4,-13.8,20.0,11.2,
+CRM,2026-11-24,REVERSAL,WATCH,38.6,193.26,34.8,20.7,-2.908,True,-8.8,-14.8,False,False,1544,Information Technology,Application Software,11,11,-13.4,-13.8,46.0,3.1,2026-12-02
+GLW,2026-11-24,REVERSAL,WATCH,37.7,101.87,39.3,30.6,-0.081,True,-10.4,-23.8,False,False,1193,Information Technology,Electronic Components,11,11,-13.4,-13.8,,,
+FSLR,2026-11-24,REVERSAL,WATCH,36.3,148.0,34.8,24.8,-3.511,True,-13.7,-16.2,False,False,637,Information Technology,Semiconductors,11,11,-13.4,-13.8,98.0,-34.5,
+CMI,2026-11-24,REVERSAL,WATCH,35.1,414.83,31.9,22.3,-2.454,True,-9.1,-16.4,False,False,819,Industrials,Construction Machinery & Heavy Transportation Equipment,6,8,-4.5,1.3,92.0,-23.3,
+PLTR,2026-11-24,REVERSAL,WATCH,33.3,161.18,43.2,26.4,-0.75,True,-4.0,-11.8,True,False,4321,Information Technology,Application Software,11,11,-13.4,-13.8,46.0,3.1,
+MCHP,2026-11-24,REVERSAL,WATCH,32.2,56.36,36.6,29.0,-0.396,True,-13.1,-20.8,False,False,1183,Information Technology,Semiconductors,11,11,-13.4,-13.8,98.0,-34.5,
+FIS,2026-11-24,REVERSAL,WATCH,31.5,27.13,36.3,30.2,-0.248,True,-11.4,-18.6,False,False,341,Financials,Transaction & Payment Processing Services,3,7,5.2,2.3,18.0,12.3,
+NTAP,2026-11-24,REVERSAL,WATCH,30.5,163.0,36.7,29.4,-1.189,True,-10.2,-18.9,True,False,353,Information Technology,"Technology Hardware, Storage & Peripherals",11,11,-13.4,-13.8,88.0,-18.4,2026-12-01
+ORCL,2026-11-24,REVERSAL,WATCH,29.4,109.5,40.9,31.9,-0.879,True,-9.4,-16.2,False,False,5249,Information Technology,Application Software,11,11,-13.4,-13.8,46.0,3.1,2026-12-14
+APTV,2026-11-24,REVERSAL,WATCH,29.3,37.43,38.4,25.9,-0.165,True,-6.5,-11.7,False,False,145,Consumer Discretionary,Automotive Parts & Equipment,4,1,-1.5,6.5,,,
+BA,2026-11-24,REVERSAL,WATCH,28.6,163.59,38.1,24.7,-0.232,True,-3.2,-10.2,False,False,1476,Industrials,Aerospace & Defense,6,8,-4.5,1.3,82.0,-11.0,
+ILMN,2026-11-24,REVERSAL,WATCH,28.1,204.52,40.3,32.3,-0.667,True,-7.2,-17.5,True,False,496,Health Care,Life Sciences Tools & Services,1,3,28.8,4.3,4.0,48.9,
+NEM,2026-11-24,REVERSAL,WATCH,26.4,99.69,37.6,29.7,-1.784,True,-10.1,-13.1,False,False,858,Materials,Gold,7,9,-5.9,-1.0,,,
+NFLX,2026-11-24,REVERSAL,WATCH,26.3,58.87,36.6,27.5,-0.217,True,-4.8,-11.6,False,False,2480,Communication Services,Movies & Entertainment,10,4,-13.2,4.2,78.0,-8.6,
+META,2026-11-24,REVERSAL,WATCH,24.8,589.82,40.2,30.3,-1.98,True,-4.2,-12.4,False,False,11769,Communication Services,Interactive Media & Services,10,4,-13.2,4.2,96.0,-30.6,
+ZBRA,2026-11-24,REVERSAL,WATCH,24.4,314.97,39.5,29.3,-0.423,True,-4.7,-11.7,True,False,260,Information Technology,Electronic Equipment & Instruments,11,11,-13.4,-13.8,24.0,9.6,
+BKR,2026-11-24,REVERSAL,WATCH,24.2,45.89,35.4,30.4,-0.132,True,-6.5,-13.9,False,False,513,Energy,Oil & Gas Equipment & Services,5,10,-2.0,-12.4,,,
+DASH,2026-11-24,REVERSAL,WATCH,23.9,160.13,38.9,31.2,-1.471,True,-7.8,-12.3,False,False,1146,Consumer Discretionary,Specialized Consumer Services,4,1,-1.5,6.5,,,
+UNH,2026-11-24,REVERSAL,WATCH,23.9,341.88,32.2,24.2,-8.207,True,-11.7,-11.7,False,False,2766,Health Care,Managed Health Care,1,3,28.8,4.3,44.0,3.7,
+VEEV,2026-11-24,REVERSAL,WATCH,23.5,273.62,35.8,24.7,-4.952,True,-7.8,-6.6,True,False,443,Health Care,Health Care Technology,1,3,28.8,4.3,,,2026-12-03
+TRMB,2026-11-24,REVERSAL,WATCH,23.1,54.61,43.9,28.7,-0.294,True,-4.1,-6.7,False,False,167,Information Technology,Application Software,11,11,-13.4,-13.8,46.0,3.1,
+COF,2026-11-24,REVERSAL,WATCH,21.7,181.36,31.6,26.1,-1.934,True,-7.1,-8.0,False,False,954,Financials,Consumer Finance,3,7,5.2,2.3,,,
+DVA,2026-11-24,REVERSAL,WATCH,21.6,164.17,39.7,30.2,-2.332,True,-7.7,-8.7,False,False,162,Health Care,Health Care Services,1,3,28.8,4.3,32.0,6.6,
+C,2026-11-24,REVERSAL,WATCH,21.5,113.85,36.8,28.2,-0.761,True,-5.4,-8.5,False,False,1237,Financials,Diversified Banks,3,7,5.2,2.3,58.0,-2.8,2027-01-13
+STLD,2026-11-24,REVERSAL,WATCH,21.4,215.23,38.4,29.2,-2.299,True,-7.1,-8.3,False,False,219,Materials,Steel,7,9,-5.9,-1.0,,,
+NWSA,2026-11-24,REVERSAL,WATCH,21.2,26.0,39.1,29.7,-0.127,True,-4.5,-9.0,False,False,127,Communication Services,Publishing,10,4,-13.2,4.2,,,
+SW,2026-11-24,REVERSAL,WATCH,21.1,39.95,42.1,28.3,-0.399,True,-4.7,-5.8,False,False,236,Materials,Paper & Plastic Packaging Products & Materials,7,9,-5.9,-1.0,36.0,4.6,
+INTU,2026-11-24,REVERSAL,WATCH,20.7,279.42,32.1,26.8,-8.933,True,-14.9,-11.1,False,False,1072,Information Technology,Application Software,11,11,-13.4,-13.8,46.0,3.1,
+STT,2026-11-24,REVERSAL,WATCH,20.0,160.85,38.8,28.1,-0.977,True,-4.4,-6.4,False,False,260,Financials,Asset Management & Custody Banks,3,7,5.2,2.3,52.0,-1.0,2027-01-15
+ROK,2026-11-24,REVERSAL,WATCH,19.9,381.83,41.5,32.2,-1.98,True,-5.5,-9.0,False,False,456,Industrials,Electrical Components & Equipment,6,8,-4.5,1.3,94.0,-23.6,
+CDNS,2026-11-24,REVERSAL,WATCH,19.1,296.6,41.2,31.5,-3.309,True,-7.2,-8.2,False,False,677,Information Technology,Application Software,11,11,-13.4,-13.8,46.0,3.1,
+SNPS,2026-11-24,REVERSAL,WATCH,19.0,414.82,40.4,30.7,-5.305,True,-7.9,-7.9,False,False,798,Information Technology,Application Software,11,11,-13.4,-13.8,46.0,3.1,2026-12-08
+HBAN,2026-11-24,REVERSAL,WATCH,18.4,14.78,39.1,27.7,-0.124,True,-4.6,-4.5,False,False,292,Financials,Regional Banks,3,7,5.2,2.3,66.0,-5.8,
+IT,2026-11-24,REVERSAL,WATCH,18.4,180.08,39.8,32.3,-2.605,True,-8.0,-8.4,True,False,231,Information Technology,IT Consulting & Other Services,11,11,-13.4,-13.8,22.0,9.6,
+TT,2026-11-24,REVERSAL,WATCH,18.1,404.49,42.6,32.0,-0.14,True,-2.0,-7.8,False,False,723,Industrials,Building Products,6,8,-4.5,1.3,54.0,-1.2,
+ADBE,2026-11-24,REVERSAL,WATCH,17.8,232.08,44.9,30.9,-1.581,True,-2.8,-4.3,False,False,944,Information Technology,Application Software,11,11,-13.4,-13.8,46.0,3.1,2026-12-09
+CFG,2026-11-24,REVERSAL,WATCH,17.5,61.17,41.3,29.2,-0.437,True,-3.8,-4.3,False,False,249,Financials,Regional Banks,3,7,5.2,2.3,66.0,-5.8,2027-01-20
+IP,2026-11-24,REVERSAL,WATCH,17.4,30.62,39.1,28.4,-0.493,True,-8.5,-7.8,False,False,219,Materials,Paper & Plastic Packaging Products & Materials,7,9,-5.9,-1.0,36.0,4.6,
+WDAY,2026-11-24,REVERSAL,WATCH,16.5,179.23,39.5,31.6,-2.101,True,-5.8,-6.6,True,False,429,Information Technology,Application Software,11,11,-13.4,-13.8,46.0,3.1,2026-11-24
+BAC,2026-11-24,REVERSAL,WATCH,15.8,48.56,39.2,27.9,-0.036,True,-2.5,-7.1,False,False,1797,Financials,Diversified Banks,3,7,5.2,2.3,58.0,-2.8,2027-01-15
+IFF,2026-11-24,REVERSAL,WATCH,15.1,85.32,52.1,31.7,-0.055,True,0.6,-0.9,True,False,245,Materials,Specialty Chemicals,7,9,-5.9,-1.0,74.0,-7.4,
+MRK,2026-11-24,REVERSAL,WATCH,14.8,141.57,47.8,31.9,-1.054,True,-1.7,-2.4,True,False,1379,Health Care,Pharmaceuticals,1,3,28.8,4.3,16.0,12.7,
+DVN,2026-11-24,REVERSAL,WATCH,14.6,41.33,34.1,32.1,-0.367,True,-8.1,-12.5,False,False,568,Energy,Oil & Gas Exploration & Production,5,10,-2.0,-12.4,72.0,-7.0,
+OXY,2026-11-24,REVERSAL,WATCH,14.6,53.38,32.9,29.1,-0.532,True,-7.1,-9.2,False,False,647,Energy,Oil & Gas Exploration & Production,5,10,-2.0,-12.4,72.0,-7.0,2027-02-17
+F,2026-11-24,REVERSAL,WATCH,14.1,11.95,51.1,32.2,-0.016,True,0.1,-1.3,False,False,558,Consumer Discretionary,Automobile Manufacturers,4,1,-1.5,6.5,,,
+IQV,2026-11-24,REVERSAL,WATCH,13.4,252.01,39.5,32.5,-2.371,True,-4.7,-5.4,True,False,387,Health Care,Life Sciences Tools & Services,1,3,28.8,4.3,4.0,48.9,
+LYB,2026-11-24,REVERSAL,WATCH,13.1,55.62,34.5,31.2,-0.944,True,-10.0,-9.6,False,False,271,Materials,Specialty Chemicals,7,9,-5.9,-1.0,74.0,-7.4,
+SRE,2026-11-24,REVERSAL,WATCH,12.7,78.76,45.1,30.9,-0.216,True,-1.9,-2.3,False,False,397,Utilities,Multi-Utilities,9,5,-6.3,3.9,70.0,-6.3,
+SLB,2026-11-24,REVERSAL,WATCH,11.9,46.99,37.1,30.5,-0.505,True,-6.5,-6.6,False,False,568,Energy,Oil & Gas Equipment & Services,5,10,-2.0,-12.4,,,
+NKE,2026-11-24,REVERSAL,WATCH,11.6,35.75,45.7,31.7,-0.521,True,-4.7,-2.4,False,False,950,Consumer Discretionary,"Apparel, Accessories & Luxury Goods",4,1,-1.5,6.5,84.0,-14.4,2026-12-17
+EXE,2026-11-24,REVERSAL,WATCH,11.5,82.05,35.1,29.5,-0.592,True,-4.8,-6.4,False,False,258,Energy,Oil & Gas Exploration & Production,5,10,-2.0,-12.4,72.0,-7.0,
+MTB,2026-11-24,REVERSAL,WATCH,11.3,214.33,44.0,32.2,-0.802,True,-2.0,-2.3,False,False,175,Financials,Regional Banks,3,7,5.2,2.3,66.0,-5.8,2027-01-15
+FITB,2026-11-24,REVERSAL,WATCH,11.1,51.12,42.9,32.4,-0.447,True,-3.8,-1.9,False,False,307,Financials,Regional Banks,3,7,5.2,2.3,66.0,-5.8,
+SYF,2026-11-24,REVERSAL,WATCH,10.8,67.91,30.4,29.3,-0.574,True,-6.1,-6.5,False,False,364,Financials,Consumer Finance,3,7,5.2,2.3,,,
+JPM,2026-11-24,REVERSAL,WATCH,10.1,317.1,37.3,30.7,-2.921,True,-5.3,-5.5,False,False,2424,Financials,Diversified Banks,3,7,5.2,2.3,58.0,-2.8,2027-01-12
+PM,2026-11-24,REVERSAL,WATCH,8.6,183.95,34.1,31.3,-2.117,True,-6.8,-6.1,True,False,1113,Consumer Staples,Tobacco,2,2,5.9,5.9,,,
+KEY,2026-11-24,REVERSAL,WATCH,7.9,19.97,39.8,31.1,-0.188,True,-4.6,-3.1,False,False,294,Financials,Regional Banks,3,7,5.2,2.3,66.0,-5.8,2027-01-20
+PNC,2026-11-24,REVERSAL,WATCH,5.5,218.62,41.7,32.6,-1.613,True,-3.6,-2.3,False,False,366,Financials,Diversified Banks,3,7,5.2,2.3,58.0,-2.8,2027-01-15
+SNDK,2026-11-24,REVERSAL,EARLY,50.5,77.95,28.3,25.4,-1.237,False,-32.3,-52.4,False,False,12675,Information Technology,"Technology Hardware, Storage & Peripherals",11,11,-13.4,-13.8,88.0,-18.4,
+MU,2026-11-24,REVERSAL,EARLY,28.3,629.79,37.4,29.5,-6.099,False,-17.3,-30.2,False,False,26680,Information Technology,Semiconductors,11,11,-13.4,-13.8,98.0,-34.5,2026-12-17
+HPE,2026-11-24,REVERSAL,EARLY,23.4,40.19,35.6,29.3,-0.289,False,-17.5,-29.7,False,False,862,Information Technology,"Technology Hardware, Storage & Peripherals",11,11,-13.4,-13.8,88.0,-18.4,
+TPL,2026-11-24,REVERSAL,EARLY,21.3,251.4,24.0,24.0,-1.902,False,-13.5,-22.3,False,True,167,Energy,Oil & Gas Exploration & Production,5,10,-2.0,-12.4,72.0,-7.0,
+AMAT,2026-11-24,REVERSAL,EARLY,20.9,323.76,39.2,30.9,-0.677,False,-10.7,-23.2,False,False,3195,Information Technology,Semiconductor Materials & Equipment,11,11,-13.4,-13.8,100.0,-38.8,
+ALB,2026-11-24,REVERSAL,EARLY,18.0,80.63,30.0,25.0,-0.954,False,-11.4,-18.0,False,False,233,Materials,Specialty Chemicals,7,9,-5.9,-1.0,74.0,-7.4,
+BG,2026-11-24,REVERSAL,EARLY,16.3,84.06,24.5,24.5,-0.847,False,-12.3,-17.9,False,False,184,Consumer Staples,Agricultural Products & Services,2,2,5.9,5.9,,,
+KLAC,2026-11-24,REVERSAL,EARLY,14.9,133.65,40.4,32.8,-0.321,False,-9.8,-20.1,False,False,2279,Information Technology,Semiconductor Materials & Equipment,11,11,-13.4,-13.8,100.0,-38.8,
+ADM,2026-11-24,REVERSAL,EARLY,12.9,64.9,25.5,25.5,-0.197,False,-7.8,-15.4,False,False,291,Consumer Staples,Agricultural Products & Services,2,2,5.9,5.9,,,
+GEV,2026-11-24,REVERSAL,EARLY,12.7,720.65,37.8,32.0,-4.588,False,-10.4,-18.8,False,False,3655,Industrials,Heavy Electrical Equipment,6,8,-4.5,1.3,,,
+ETN,2026-11-24,REVERSAL,EARLY,12.1,319.27,37.8,31.5,-1.288,False,-9.1,-18.0,False,False,1197,Industrials,Electrical Components & Equipment,6,8,-4.5,1.3,94.0,-23.6,
+JBL,2026-11-24,REVERSAL,EARLY,11.6,226.69,36.0,31.5,-0.976,False,-10.7,-19.0,False,False,289,Information Technology,Electronic Manufacturing Services,11,11,-13.4,-13.8,,,2026-12-16
+ADI,2026-11-24,REVERSAL,EARLY,11.1,312.95,32.7,32.7,-7.067,False,-19.9,-20.8,False,False,2257,Information Technology,Semiconductors,11,11,-13.4,-13.8,98.0,-34.5,2026-11-24
+VLO,2026-11-24,REVERSAL,EARLY,8.9,324.67,31.4,31.4,-3.523,False,-9.9,-17.3,True,True,1124,Energy,Oil & Gas Refining & Marketing,5,10,-2.0,-12.4,,,
+MPC,2026-11-24,REVERSAL,EARLY,7.3,355.16,31.1,31.1,-4.873,False,-10.4,-15.4,True,True,1010,Energy,Oil & Gas Refining & Marketing,5,10,-2.0,-12.4,,,
+GS,2026-11-24,REVERSAL,EARLY,6.2,806.02,35.3,29.3,-9.794,False,-8.9,-10.2,False,False,2133,Financials,Investment Banking & Brokerage,3,7,5.2,2.3,80.0,-10.0,
+MS,2026-11-24,REVERSAL,EARLY,4.9,168.79,36.2,30.1,-1.777,False,-8.0,-9.7,False,False,1206,Financials,Investment Banking & Brokerage,3,7,5.2,2.3,80.0,-10.0,
+WSM,2026-11-24,REVERSAL,EARLY,4.3,213.87,34.0,31.9,-6.126,False,-13.9,-11.7,False,False,315,Consumer Discretionary,Homefurnishing Retail,4,1,-1.5,6.5,,,
+DE,2026-11-24,REVERSAL,EARLY,-0.8,613.76,37.4,32.0,-6.656,False,-6.8,-7.2,True,False,862,Industrials,Agricultural & Farm Machinery,6,8,-4.5,1.3,,,2026-11-25
+ESS,2026-11-24,MOMENTUM,TRIGGERED,21.1,275.58,55.9,46.4,0.203,True,1.8,1.7,True,False,161,Real Estate,Multi-Family Residential REITs,8,6,-6.2,2.8,76.0,-8.2,
+EXPD,2026-11-24,MOMENTUM,TRIGGERED,21.1,197.81,55.9,43.0,0.201,True,1.7,2.4,True,False,317,Industrials,Air Freight & Logistics,6,8,-4.5,1.3,60.0,-2.8,
+EXC,2026-11-24,SQUEEZE,WATCH,19.2,46.23,60.3,53.8,-0.109,True,0.8,6.0,True,False,417,Utilities,Electric Utilities,9,5,-6.3,3.9,68.0,-6.3,
+FE,2026-11-24,SQUEEZE,WATCH,19.2,47.36,59.8,57.7,-0.002,False,1.1,4.4,True,False,236,Utilities,Electric Utilities,9,5,-6.3,3.9,68.0,-6.3,
+PTC,2026-11-24,SQUEEZE,WATCH,18.4,196.0,69.2,66.8,-1.24,True,0.3,8.8,True,False,340,Information Technology,Application Software,11,11,-13.4,-13.8,46.0,3.1,
+SO,2026-11-24,SQUEEZE,WATCH,18.4,94.11,59.7,55.9,-0.153,True,1.3,5.8,True,False,818,Utilities,Electric Utilities,9,5,-6.3,3.9,68.0,-6.3,
+VRSN,2026-11-24,SQUEEZE,WATCH,17.6,317.25,62.8,49.8,-0.024,True,2.5,5.0,True,False,320,Information Technology,Internet Services & Infrastructure,11,11,-13.4,-13.8,,,
+AEP,2026-11-24,SQUEEZE,WATCH,16.0,127.3,52.6,44.3,-0.381,True,-0.2,2.5,True,False,541,Utilities,Electric Utilities,9,5,-6.3,3.9,68.0,-6.3,
+CMS,2026-11-24,SQUEEZE,WATCH,16.0,71.01,61.9,54.0,-0.043,True,1.8,5.9,False,False,274,Utilities,Multi-Utilities,9,5,-6.3,3.9,70.0,-6.3,
+PEG,2026-11-24,SQUEEZE,WATCH,16.0,74.93,58.0,52.7,-0.102,True,1.0,4.5,False,False,240,Utilities,Electric Utilities,9,5,-6.3,3.9,68.0,-6.3,
+PGR,2026-11-24,SQUEEZE,WATCH,16.0,235.68,59.1,50.3,-0.573,True,1.6,6.2,True,False,551,Financials,Property & Casualty Insurance,3,7,5.2,2.3,14.0,16.7,
+LH,2026-11-24,SQUEEZE,WATCH,12.9,376.11,68.9,62.4,-1.069,True,2.5,11.8,True,False,281,Health Care,Health Care Services,1,3,28.8,4.3,32.0,6.6,
+XEL,2026-11-24,SQUEEZE,WATCH,11.3,80.82,60.4,52.7,-0.246,True,0.9,6.1,True,False,776,Utilities,Multi-Utilities,9,5,-6.3,3.9,70.0,-6.3,
+AJG,2026-11-24,SQUEEZE,WATCH,10.5,286.82,61.5,52.8,-1.375,True,2.6,12.0,True,False,504,Financials,Insurance Brokers,3,7,5.2,2.3,10.0,26.1,
+TECH,2026-11-24,SQUEEZE,WATCH,10.5,72.81,60.1,52.2,-0.005,True,0.2,0.4,True,False,236,Health Care,Life Sciences Tools & Services,1,3,28.8,4.3,4.0,48.9,
+ABBV,2026-11-24,SQUEEZE,WATCH,8.9,300.28,64.3,45.8,-0.777,True,3.1,7.4,True,False,1624,Health Care,Biotechnology,1,3,28.8,4.3,2.0,76.4,
+NI,2026-11-24,SQUEEZE,WATCH,8.1,45.13,58.5,52.4,-0.178,True,0.6,6.6,True,False,263,Utilities,Multi-Utilities,9,5,-6.3,3.9,70.0,-6.3,
+CPRT,2026-11-24,SQUEEZE,WATCH,4.9,32.35,62.2,51.6,-0.099,True,2.6,10.2,True,False,333,Industrials,Diversified Support Services,6,8,-4.5,1.3,,,2026-12-01
+VZ,2026-11-24,SQUEEZE,WATCH,3.3,47.16,61.1,51.1,0.111,True,3.0,3.9,True,False,1004,Communication Services,Integrated Telecommunication Services,10,4,-13.2,4.2,,,
+HIG,2026-11-24,SQUEEZE,WATCH,2.5,138.16,58.2,51.4,-0.026,True,1.7,4.2,True,False,253,Financials,Property & Casualty Insurance,3,7,5.2,2.3,14.0,16.7,
+DTE,2026-11-24,SQUEEZE,WATCH,0.2,137.7,58.1,53.0,-0.361,True,0.7,5.2,False,False,183,Utilities,Multi-Utilities,9,5,-6.3,3.9,70.0,-6.3,
+INCY,2026-11-24,SQUEEZE,WATCH,0.2,123.61,58.9,41.7,-0.038,True,3.5,4.4,True,False,200,Health Care,Biotechnology,1,3,28.8,4.3,2.0,76.4,
+KHC,2026-11-24,SQUEEZE,WATCH,0.2,25.57,60.0,55.0,0.037,True,3.1,6.7,True,False,381,Consumer Staples,Packaged Foods & Meats,2,2,5.9,5.9,42.0,3.7,
+CIEN,2026-11-24,AVOID,drift,0.0,239.27,38.9,35.2,-0.326,False,-14.0,-28.0,False,False,902,Information Technology,Communications Equipment,11,11,-13.4,-13.8,90.0,-21.8,
+CSCO,2026-11-24,AVOID,drift,0.0,93.99,41.0,33.4,-0.153,True,-5.0,-11.0,False,False,2271,Information Technology,Communications Equipment,11,11,-13.4,-13.8,90.0,-21.8,
+HPQ,2026-11-24,AVOID,drift,0.0,27.94,41.0,38.2,-0.021,False,-3.7,-9.1,True,False,413,Information Technology,"Technology Hardware, Storage & Peripherals",11,11,-13.4,-13.8,88.0,-18.4,
+HUBB,2026-11-24,AVOID,drift,0.0,422.1,44.4,33.4,-0.226,True,-2.1,-6.2,False,False,283,Industrials,Industrial Machinery & Supplies & Components,6,8,-4.5,1.3,48.0,2.6,
+IBKR,2026-11-24,AVOID,drift,0.0,74.71,42.6,34.3,-0.091,True,-3.7,-10.0,False,False,400,Financials,Investment Banking & Brokerage,3,7,5.2,2.3,80.0,-10.0,
+ODFL,2026-11-24,AVOID,drift,0.0,169.57,43.2,40.6,0.098,False,-1.6,-4.3,False,False,390,Industrials,Cargo Ground Transportation,6,8,-4.5,1.3,,,
