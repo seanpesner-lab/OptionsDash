@@ -55,3 +55,5 @@ picked_on,ticker,exit_date,reason,stock_close,option_mid
 2026-11-19,AVGO,2026-11-20,stop,304.41,
 2026-11-24,INTC,2026-11-24,stop,54.8,
 2026-11-24,TER,2026-11-24,stop,213.22,
+2026-11-24,LRCX,2026-11-25,stop,185.01,14.87
+2026-11-24,STX,2026-11-25,stop,472.33,28.17
